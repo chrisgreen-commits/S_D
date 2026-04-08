@@ -134,13 +134,13 @@
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 803 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: 2450 * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => changeRoom(3) } 
+            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => changeRoom(3) } 
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
             { id: "Balls", x: (2000-100) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
             { id: "Cue", x: 2050 * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
-            { id: "Mug", x: 1250 * R_W_SCALE_X, y: (1040-200) * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") },
+            { id: "Mug", x: 1250 * R_W_SCALE_X, y: (1040-200+50) * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
             { id: "Window", x: 957 * R_W_SCALE_X, y: 656 * R_W_SCALE_Y, action: () => say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.", true) }
         ]}
@@ -148,7 +148,7 @@
 
     function handleFlower() {
         if (state.vasePlaced) {
-            say("Path cleared to Room 5!", true); // Room 5 placeholder
+            say("Path cleared to Room 5!", true); 
         } else if (state.activeItem === "Vase") {
             state.cutsceneStep = 1;
             document.getElementById('bg').src = "Room3_Billiards2.png";
@@ -195,11 +195,30 @@
     }
 
     function changeRoom(id, isInitial = false) {
+        const m1 = document.getElementById('mus-room1');
+        const m2 = document.getElementById('mus-room2');
         document.getElementById('game-container').style.opacity = "0";
+
         setTimeout(() => {
             state.room = id;
-            if (id === 1) { state.winterX = isInitial ? 80 : 1100; state.winterY = 550; } 
-            else { state.winterX = 80; state.winterY = 550; } // Spawn far left for R2 & R3
+            m1.pause();
+            m2.pause();
+
+            if (id === 1) { 
+                state.winterX = isInitial ? 80 : 1100; 
+                m1.volume = GLOBAL_VOLUME;
+                m1.play();
+            } else { 
+                state.winterX = 80; 
+                m2.volume = GLOBAL_VOLUME;
+                m2.play();
+            }
+            state.winterY = 550;
+
+            const winter = document.getElementById('winter');
+            winter.style.left = (state.winterX - 46) + 'px'; 
+            winter.style.top = (state.winterY - 120) + 'px';
+
             renderScene();
             document.getElementById('game-container').style.opacity = "1";
         }, 500);
@@ -285,8 +304,10 @@
             if (hs && !state.inventory.includes(name)) {
                 el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
                 if (name === "Phone" || name === "Notepad") el.style.width = "35px";
-                else if (name === "Mug" || name === "Balls") el.style.width = "17px"; // 25% of 70px
+                else if (name === "Mug") el.style.width = "17px"; 
+                else if (name === "Balls") el.style.width = "34px"; 
                 else el.style.width = "70px";
+                
                 if (state.room === 1 && state.isDark && name !== "Torch") el.style.display = 'none';
                 else el.style.display = 'block';
             } else el.style.display = 'none';
