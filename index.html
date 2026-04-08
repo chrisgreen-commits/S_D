@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shadows & Daylight: Avalon (Side-Scroller)</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #be9b7b; }
+        canvas { display: block; margin: 0 auto; image-rendering: pixelated; }
+        #ui { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 780px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+        .stat-box { background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid #be9b7b; font-size: 12px; text-transform: uppercase; }
+        #dialogue-container { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; z-index: 20; pointer-events: none; }
+        #dialogue-box { width: 70%; background: rgba(15, 10, 5, 0.95); border: 2px solid #be9b7b; padding: 15px; display: none; }
+        .highlight { color: #fff; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <div class="stat-box">ROOM: <span id="room-val" class="highlight">1</span></div>
+    <div class="stat-box">KICKS: <span id="kicks-val" class="highlight">25</span></div>
+    <div class="stat-box">ACTIVE: <span id="item-val" class="highlight">NONE</span></div>
+    <div class="stat-box">NINJAS: <span id="ninja-val" class="highlight">100</span></div>
+</div>
+
+<div id="dialogue-container">
+    <div id="dialogue-box"><strong id="speaker" class="highlight"></strong>: <span id="text"></span></div>
+</div>
+
+<canvas id="gameCanvas" width="800" height="450"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- ASSET LOADING ---
+const img = (src) => { const i = new Image(); i.src = src; return i; };
+const assets = {
+    w_idle: img('WinterIdle.png'),
+    w_walk1: img('WinterWalkLeft.png'),
+    w_walk2: img('WinterWalkRight.png'),
+    w_atk1: img('WinterCueWindup.png'),
+    w_atk2: img('WinterCueImpact.png'),
+    w_combat: img('WinterCombatIdle.png'),
+    n_walk: img('ShinobiWalk.png'),
+    n_atk: img('ShinobiSwing.png'),
+    n_dead: img('ShinobiDefeat.png'),
+    boss: img('KidnapperTalk.png'),
+    mug: img('ItemMug.png')
+};
+
+// --- GAME STATE ---
+const state = {
+    room: 1,
+    winter: { x: 50, y: 280, vx: 0, dir: 1, frame: 0, atkTimer: 0, kicks: 25 },
+    ninjas: [],
+    ninjasDefeated: 0,
+    items: [{x: 400, type: 'mug', collected: false}],
+    isPaused: false,
+    cameraX: 0
+};
+
+// --- CLASSES ---
+class Enemy {
+    constructor(x) {
+        this.x = x;
+        this.hp = 3;
+        this.state = 'walk';
+        this.dead = false;
+        this.atkCooldown = 0;
+    }
+    update(px) {
+        if (this.dead) return;
+        let dist = this.x - px;
+        if (Math.abs(dist) > 70) {
+            this.state = 'walk';
+            this.x += dist > 0 ? -1.5 : 1.5;
+        } else {
+            this.state = 'atk';
+            if (this.atkCooldown <= 0) {
+                if (Math.random() < 0.02) { // Random kick attempt
+                    state.winter.kicks--;
+                    updateUI();
+                    this.atkCooldown = 60;
+                }
+            }
+        }
+        if (this.atkCooldown > 0) this.atkCooldown--;
+    }
+}
+
+// --- ENGINE ---
+const keys = {};
+window.onkeydown = (e) => keys[e.key.toLowerCase()] = true;
+window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
+
+function updateUI() {
+    document.getElementById('room-val').innerText = state.room;
+    document.getElementById('kicks-val').innerText = state.winter.kicks;
+    document.getElementById('ninja-val').innerText = 100 - state.ninjasDefeated;
+}
+
+function say(speaker, msg) {
+    state.isPaused = true;
+    const box = document.getElementById('dialogue-box');
+    document.getElementById('speaker').innerText = speaker;
+    document.getElementById('text').innerText = msg;
+    box.style.display = 'block';
+    setTimeout(() => { box.style.display = 'none'; state.isPaused = false; }, 3000);
+}
+
+function loop() {
+    if (!state.isPaused) {
+        const w = state.winter;
+        
+        // Input & Movement
+        if (keys['a']) { w.vx = -4; w.dir = -1; }
+        else if (keys['d']) { w.vx = 4; w.dir = 1; }
+        else { w.vx = 0; }
+        
+        if (keys['shift'] && w.atkTimer === 0) w.atkTimer = 20;
+
+        w.x += w.vx;
+        if (w.atkTimer > 0) w.atkTimer--;
+
+        // Room Transitions
+        if (w.x > 850) {
+            state.room++;
+            w.x = 20;
+            if (state.room === 4) spawnNinjas();
+            updateUI();
+        }
+
+        // Combat Logic
+        state.ninjas.forEach(n => {
+            n.update(w.x);
+            if (w.atkTimer === 10 && Math.abs(w.x - n.x) < 80 && !n.dead) {
+                n.hp--;
+                if (n.hp <= 0) { n.dead = true; state.ninjasDefeated++; updateUI(); }
+            }
+        });
+    }
+    draw();
+    requestAnimationFrame(loop);
+}
+
+function spawnNinjas() {
+    state.ninjas = [];
+    for(let i=0; i<10; i++) state.ninjas.push(new Enemy(800 + (i * 300)));
+}
+
+function draw() {
+    ctx.clearRect(0,0,800,450);
+    
+    // Draw Room Background (Procedural Stone)
+    ctx.fillStyle = state.room === 1 ? "#0a0a0f" : "#1a1a1a";
+    ctx.fillRect(0, 0, 800, 380);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 380, 800, 70); // Floor
+
+    // Draw Items
+    if (state.room === 1) {
+        state.items.forEach(it => {
+            if (!it.collected) {
+                ctx.drawImage(assets.mug, it.x, 340, 40, 40);
+                if (Math.abs(state.winter.x - it.x) < 40) {
+                    it.collected = true;
+                    state.activeItem = "MUG";
+                    document.getElementById('item-val').innerText = "MUG";
+                    say("WINTER", "Found a mug. Now for those coffee beans...");
+                }
+            }
+        });
+    }
+
+    // Draw Enemies
+    state.ninjas.forEach(n => {
+        let nSprite = n.dead ? assets.n_dead : (n.state === 'atk' ? assets.n_atk : assets.n_walk);
+        ctx.drawImage(nSprite, n.x - 40, 260, 80, 130);
+    });
+
+    // Draw Winter
+    const w = state.winter;
+    let wSprite = assets.w_idle;
+    if (w.atkTimer > 0) wSprite = w.atkTimer > 10 ? assets.w_atk1 : assets.w_atk2;
+    else if (w.vx !== 0) {
+        w.frame += 0.15;
+        wSprite = (Math.floor(w.frame) % 2 === 0) ? assets.w_walk1 : assets.w_walk2;
+    } else if (state.room >= 4) wSprite = assets.w_combat;
+
+    ctx.save();
+    ctx.translate(w.x, 260);
+    if (w.dir === -1) ctx.scale(-1, 1);
+    ctx.drawImage(wSprite, -40, 0, 80, 130);
+    ctx.restore();
+}
+
+loop();
+say("WINTER", "I'm awake... but where is 'Avalon'?");
+</script>
+</body>
+</html>
