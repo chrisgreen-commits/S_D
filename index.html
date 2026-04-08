@@ -6,11 +6,12 @@
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: auto; }
         
+        /* Updated to 16:9 Ratio (1280x720) */
         #game-container { 
             position: relative; 
-            width: 1200px; 
-            height: 900px; 
-            margin: 20px auto; 
+            width: 1280px; 
+            height: 720px; 
+            margin: 40px auto; 
             border: 6px solid #be9b7b; 
             background: #000; 
             overflow: hidden;
@@ -18,12 +19,13 @@
 
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        #winter { position: absolute; bottom: 122px; width: 124px; z-index: 5; transition: left linear; }
-        #npc { position: absolute; bottom: 122px; right: 150px; width: 135px; display: none; z-index: 4; }
+        /* Character heights adjusted slightly for the shorter 720px height */
+        #winter { position: absolute; bottom: 110px; width: 124px; z-index: 5; transition: left linear; }
+        #npc { position: absolute; bottom: 110px; right: 150px; width: 135px; display: none; z-index: 4; }
         
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); z-index: 100;
+            background: rgba(0,0,0,0.8); z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; cursor: pointer;
         }
@@ -36,20 +38,21 @@
 
         .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
         
+        /* Inventory container now uses box-sizing to prevent bleeding */
         #inventory { 
-            position: absolute; bottom: 0; width: 100%; height: 112px; 
+            position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
             display: flex; align-items: center; padding: 0 30px; z-index: 10;
             box-sizing: border-box; 
         }
-        .slot { width: 75px; height: 75px; border: 2px solid #444; margin-right: 15px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .slot img { width: 60px; height: 60px; }
+        .slot { width: 65px; height: 65px; border: 2px solid #444; margin-right: 15px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .slot img { width: 50px; height: 50px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
         
         #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 24px; }
-        .hotspot { position: absolute; cursor: pointer; z-index: 8; }
+        .hotspot { position: absolute; cursor: pointer; z-index: 8; /* background: rgba(255,0,0,0.2); // Debug: Uncomment to see hotspots */ }
         
-        #active-txt-label { margin-left: auto; font-size: 18px; white-space: nowrap; }
+        #active-txt-label { margin-left: auto; font-size: 18px; white-space: nowrap; color: #be9b7b; }
     </style>
 </head>
 <body>
@@ -72,6 +75,7 @@
     <img id="npc" src="KidnapperTalk.png">
     
     <div id="dialogue"></div>
+    
     <div id="inventory">
         <div class="slot" id="s0" onclick="selectItem(0)"></div>
         <div class="slot" id="s1" onclick="selectItem(1)"></div>
@@ -85,8 +89,9 @@
 </div>
 
 <script>
-    const SCALE_X = 1200 / 1376;
-    const SCALE_Y = 900 / 768;
+    // Exact mapping from 1376x768 (Source) to 1280x720 (Game)
+    const SCALE_X = 1280 / 1376;
+    const SCALE_Y = 720 / 768;
 
     const state = {
         room: 1, inventory: [], activeItem: null,
@@ -144,8 +149,8 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Torch (Initial Interaction)
-                createHotspot(570, 300, 90, 150, "Torch", () => {
+                // Torch
+                createHotspot(570 * SCALE_X, 300 * SCALE_Y, 90, 150, "Torch", () => {
                     pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
                     state.isDark = false; 
                     renderScene();
@@ -169,10 +174,10 @@
                     pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock.");
                 });
 
-                // Door Exit (1251x488)
+                // Exit (1251x488)
                 createHotspot(1251 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("I need to find a light source before moving on.");
-                    else say("I should make sure I have everything before leaving.");
+                    if (state.isDark) say("Too dark to move...");
+                    else say("I should look around more.");
                 });
             }
         }
@@ -183,7 +188,7 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = () => moveWinter(x > 1050 ? x - 120 : x, action);
+        hs.onclick = () => moveWinter(x > 1150 ? x - 120 : x, action);
         document.getElementById('click-layer').appendChild(hs);
     }
 
@@ -220,7 +225,6 @@
         const bg = document.getElementById('bg');
         bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
-        // Handle Room 1 Item Visibility
         ["Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
             if (el) {
