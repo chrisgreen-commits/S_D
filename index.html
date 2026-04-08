@@ -48,9 +48,10 @@
         }
 
         #investigate-btn {
-            font-size: 40px; cursor: pointer; margin-right: 20px; 
+            font-size: 40px; cursor: pointer; margin-left: 20px; 
             background: #222; border: 2px solid #be9b7b; border-radius: 5px;
             padding: 5px 15px; transition: background 0.2s;
+            user-select: none;
         }
         #investigate-btn:hover { background: #333; }
 
@@ -59,22 +60,32 @@
         .slot img { width: 50px; height: 50px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
         
-        #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 22px; }
+        #dialogue { 
+            position: absolute; top: 30px; width: 84%; left: 8%; 
+            background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
+            padding: 22px; display: none; z-index: 20; color: white; 
+            line-height: 1.4; font-size: 22px; cursor: pointer;
+        }
+        #dialogue:after { content: " [Click to Close]"; font-size: 14px; color: #be9b7b; }
+
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
-        
-        #active-txt-label { font-size: 16px; white-space: nowrap; color: #be9b7b; margin-left: 10px; }
+        #active-txt-label { font-size: 16px; white-space: nowrap; color: #be9b7b; margin-right: 15px; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
+    <audio id="bg-music" loop>
+        <source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg">
+    </audio>
+
     <div id="title-screen" onclick="startGame()">
         <div class="sub-title">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <p>CLICK TO BEGIN</p>
     </div>
 
-    <img id="bg" src="Room1_Library.png">
+    <img id="bg" src="Room1_Library.png" style="filter: brightness(0.08);">
     
     <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
     <img id="obj-Books" src="ItemBooks.png" class="world-obj">
@@ -83,10 +94,10 @@
     
     <img id="winter" src="WinterIdle.png">
     
-    <div id="dialogue"></div>
+    <div id="dialogue" onclick="this.style.display='none'"></div>
 
     <div id="inventory-bar">
-        <div id="investigate-btn" title="Investigate Item" onclick="investigateItem()">🔍</div>
+        <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
         <div id="slots-container">
             <div class="slot" id="s0" onclick="selectItem(0)"></div>
             <div class="slot" id="s1" onclick="selectItem(1)"></div>
@@ -99,7 +110,7 @@
             <div class="slot" id="s8" onclick="selectItem(8)"></div>
             <div class="slot" id="s9" onclick="selectItem(9)"></div>
         </div>
-        <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div id="investigate-btn" title="Investigate Item" onclick="investigateItem()">🔍</div>
     </div>
     <div id="click-layer" style="position:absolute; width:100%; height:100%; z-index:7;"></div>
 </div>
@@ -120,15 +131,25 @@
         away: { frame1: "WinterWalkAway1.png", frame2: "WinterWalkAway2.png" }
     };
 
+    window.onload = () => {
+        updateWinterVisuals();
+    };
+
     function startGame() {
         if (state.started) return;
         state.started = true;
+        
+        // Music logic
+        const music = document.getElementById('bg-music');
+        if (state.room === 1) {
+            music.play().catch(e => console.log("Audio play blocked until interaction."));
+        }
+
         document.getElementById('title-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('title-screen').style.display = 'none';
-            say("Ugh, my head... It's too dark to see anything.");
+            say("Ugh, my head... It's too dark to see anything.", true);
         }, 1000);
-        updateWinterVisuals();
         renderScene();
     }
 
@@ -169,7 +190,6 @@
             state.winterY += (dy / distance) * speed;
 
             frameCount++;
-            // Cycle strictly between the two requested frames
             winter.src = (Math.floor(frameCount / 10) % 2 === 0) ? currentSet.frame1 : currentSet.frame2;
             
             const currentScale = 0.75 + (0.25 * (state.winterY / 720));
@@ -184,17 +204,17 @@
 
     function investigateItem() {
         if (!state.activeItem) {
-            say("I need to investigate the clues.");
+            say("I need to investigate the clues.", true);
             return;
         }
 
         if (state.activeItem === "Books") {
             state.readBook = true;
-            say("Hmm, a book on King Arthur? This looks interesting! 'Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.'");
+            say("Hmm, a book on King Arthur? This looks interesting! 'Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.'", false);
         } else if (state.activeItem === "Torch") {
-            say("A standard torch. It's the only reason I can see right now.");
+            say("A standard torch. It's the only reason I can see right now.", true);
         } else {
-            say("Not much to see here, I need to look at other clues.");
+            say("Not much to see here, I need to look at other clues.", true);
         }
     }
 
@@ -226,10 +246,10 @@
                 setObjPos("obj-Card", 436, 180, 30);
                 createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card?"));
 
-                createHotspot(1253 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("I'm not wandering into that hallway in the dark.");
-                    else if (!state.readBook) say("I feel like I'm missing something important in this room.");
-                    else say("Avalon... that's where I need to go.");
+                createHotspot(1130 * SCALE_X, 402 * SCALE_Y, 120, 250, "Exit", () => {
+                    if (state.isDark) say("I'm not wandering into that hallway in the dark.", true);
+                    else if (!state.readBook) say("I feel like I'm missing something important in this room.", true);
+                    else say("Avalon... that's where I need to go.", true);
                 });
             }
         }
@@ -256,7 +276,7 @@
         if (obj) obj.style.display = 'none';
         const slot = document.getElementById('s' + (state.inventory.length - 1));
         if (slot) slot.innerHTML = `<img src="${img}">`;
-        say(msg);
+        say(msg, true);
     }
 
     function selectItem(idx) {
@@ -267,10 +287,17 @@
         document.getElementById('s' + idx).classList.add('active-slot');
     }
 
-    function say(msg) {
+    let dialogueTimeout;
+    function say(msg, autoHide = true) {
         const d = document.getElementById('dialogue');
-        d.innerText = msg; d.style.display = 'block';
-        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 6000);
+        d.innerText = msg;
+        d.style.display = 'block';
+        clearTimeout(dialogueTimeout);
+        if (autoHide) {
+            dialogueTimeout = setTimeout(() => { 
+                if(d.innerText === msg) d.style.display = 'none'; 
+            }, 5000);
+        }
     }
 
     function renderScene() {
@@ -279,6 +306,14 @@
         const bg = document.getElementById('bg');
         bg.style.filter = state.isDark ? "brightness(0.08)" : "none";
         
+        // Music check for current room
+        const music = document.getElementById('bg-music');
+        if (state.room === 1) {
+            if (music.paused) music.play();
+        } else {
+            music.pause();
+        }
+
         const torchEl = document.getElementById('obj-Torch');
         if (torchEl) torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
 
