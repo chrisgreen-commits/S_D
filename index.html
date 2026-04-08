@@ -19,7 +19,6 @@
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
         #winter { position: absolute; bottom: 122px; width: 124px; z-index: 5; transition: left linear; }
-        #npc { position: absolute; bottom: 122px; right: 150px; width: 135px; display: none; z-index: 4; }
         
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
@@ -64,17 +63,26 @@
 
     <img id="bg" src="Room1_Library.png">
     
-    <img id="obj-Books" src="ItemBooks.png" class="world-obj" style="left: 888px; top: 408px; width: 80px;">
-    
-    <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 600px; top: 615px; width: 52px;">
-    <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 900px; top: 690px; width: 38px;">
+    <img id="obj-Books" src="ItemBooks.png" class="world-obj">
+    <img id="obj-Vase" src="ItemVase.png" class="world-obj">
+    <img id="obj-Card" src="ItemCard.png" class="world-obj">
     
     <img id="winter" src="WinterIdle.png" style="left: 150px;">
     <div id="click-layer"></div>
+
+    <div id="dialogue"></div>
+    <div id="inventory">
+        <div class="slot" id="s0" onclick="selectItem(0)"></div>
+        <div class="slot" id="s1" onclick="selectItem(1)"></div>
+        <div class="slot" id="s2" onclick="selectItem(2)"></div>
+        <div class="slot" id="s3" onclick="selectItem(3)"></div>
+        <div class="slot" id="s4" onclick="selectItem(4)"></div>
+        <div class="slot" id="s5" onclick="selectItem(5)"></div>
+        <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
+</div>
 
 <script>
-    // Constants for scaling from your source (1376x768) to game (1200x900)
     const SCALE_X = 1200 / 1376;
     const SCALE_Y = 900 / 768;
 
@@ -122,19 +130,45 @@
         }, duration);
     }
 
+    // Helper to position world items based on raw 1376x768 coords
+    function setObjPos(id, rawX, rawY, w) {
+        const el = document.getElementById(id);
+        el.style.left = (rawX * SCALE_X) + "px";
+        el.style.top = (rawY * SCALE_Y) + "px";
+        el.style.width = w + "px";
+    }
+
     const scenes = {
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Hotspot for Books mapped to 1018x348
-                createHotspot(1018 * SCALE_X, 348 * SCALE_Y, 100, 100, "Books", () => {
-                    say("This book mentions Excalibur... interesting.");
-                    pickup("Books", "ItemBooks.png", "You found the Books!");
+                // Books (shifted right and up as requested)
+                setObjPos("obj-Books", 1030, 335, 70);
+                createHotspot(1030 * SCALE_X, 335 * SCALE_Y, 80, 80, "Books", () => {
+                    pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting.");
                 });
 
-                // Default Torch Hotspot
+                // Vase at 841x379
+                setObjPos("obj-Vase", 841, 379, 50);
+                createHotspot(841 * SCALE_X, 379 * SCALE_Y, 60, 80, "Vase", () => {
+                    pickup("Vase", "ItemVase.png", "A fine ceramic vase.");
+                });
+
+                // Card at 470x206
+                setObjPos("obj-Card", 470, 206, 30);
+                createHotspot(470 * SCALE_X, 206 * SCALE_Y, 50, 50, "Card", () => {
+                    pickup("Card", "ItemCard.png", "A playing card. This might pick a lock.");
+                });
+
+                // Door Exit at 1251x488
+                createHotspot(1251 * SCALE_X, 488 * SCALE_Y, 100, 250, "Exit", () => {
+                    if (state.isDark) say("It's too dark to find the way out.");
+                    else say("I should explore more before leaving.");
+                });
+
+                // Default Torch (Interactive area when dark)
                 createHotspot(570, 300, 90, 150, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "The torch is lit!");
+                    pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
                     state.isDark = false; renderScene();
                 });
             }
@@ -155,7 +189,18 @@
         state.inventory.push(name);
         const obj = document.getElementById('obj-' + name);
         if (obj) obj.style.display = 'none';
+        
+        const slot = document.getElementById('s' + (state.inventory.length - 1));
+        if (slot) slot.innerHTML = `<img src="${img}">`;
         say(msg);
+    }
+
+    function selectItem(idx) {
+        if (!state.inventory[idx]) return;
+        state.activeItem = state.inventory[idx];
+        document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
+        document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
+        document.getElementById('s' + idx).classList.add('active-slot');
     }
 
     function say(msg) {
@@ -172,10 +217,13 @@
         const bg = document.getElementById('bg');
         bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
-        const bookObj = document.getElementById('obj-Books');
-        if (!state.isDark && !state.inventory.includes("Books")) {
-            bookObj.style.display = 'block';
-        }
+        // Show world items if room is lit and they haven't been picked up
+        ["Books", "Vase", "Card"].forEach(name => {
+            const el = document.getElementById('obj-' + name);
+            if (!state.isDark && !state.inventory.includes(name)) el.style.display = 'block';
+            else el.style.display = 'none';
+        });
+
         s.setup();
     }
 </script>
