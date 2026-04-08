@@ -19,6 +19,7 @@
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
         #winter { position: absolute; bottom: 122px; width: 124px; z-index: 5; transition: left linear; }
+        #npc { position: absolute; bottom: 122px; right: 150px; width: 135px; display: none; z-index: 4; }
         
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
@@ -68,8 +69,8 @@
     <img id="obj-Card" src="ItemCard.png" class="world-obj">
     
     <img id="winter" src="WinterIdle.png" style="left: 150px;">
-    <div id="click-layer"></div>
-
+    <img id="npc" src="KidnapperTalk.png">
+    
     <div id="dialogue"></div>
     <div id="inventory">
         <div class="slot" id="s0" onclick="selectItem(0)"></div>
@@ -80,6 +81,7 @@
         <div class="slot" id="s5" onclick="selectItem(5)"></div>
         <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
+    <div id="click-layer"></div>
 </div>
 
 <script>
@@ -130,9 +132,9 @@
         }, duration);
     }
 
-    // Helper to position world items based on raw 1376x768 coords
     function setObjPos(id, rawX, rawY, w) {
         const el = document.getElementById(id);
+        if(!el) return;
         el.style.left = (rawX * SCALE_X) + "px";
         el.style.top = (rawY * SCALE_Y) + "px";
         el.style.width = w + "px";
@@ -142,34 +144,35 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Books (shifted right and up as requested)
+                // Torch (Initial Interaction)
+                createHotspot(570, 300, 90, 150, "Torch", () => {
+                    pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
+                    state.isDark = false; 
+                    renderScene();
+                });
+
+                // Books (1030x335)
                 setObjPos("obj-Books", 1030, 335, 70);
                 createHotspot(1030 * SCALE_X, 335 * SCALE_Y, 80, 80, "Books", () => {
                     pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting.");
                 });
 
-                // Vase at 841x379
+                // Vase (841x379)
                 setObjPos("obj-Vase", 841, 379, 50);
                 createHotspot(841 * SCALE_X, 379 * SCALE_Y, 60, 80, "Vase", () => {
-                    pickup("Vase", "ItemVase.png", "A fine ceramic vase.");
+                    pickup("Vase", "ItemVase.png", "An old ceramic vase.");
                 });
 
-                // Card at 470x206
+                // Card (470x206)
                 setObjPos("obj-Card", 470, 206, 30);
                 createHotspot(470 * SCALE_X, 206 * SCALE_Y, 50, 50, "Card", () => {
-                    pickup("Card", "ItemCard.png", "A playing card. This might pick a lock.");
+                    pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock.");
                 });
 
-                // Door Exit at 1251x488
-                createHotspot(1251 * SCALE_X, 488 * SCALE_Y, 100, 250, "Exit", () => {
-                    if (state.isDark) say("It's too dark to find the way out.");
-                    else say("I should explore more before leaving.");
-                });
-
-                // Default Torch (Interactive area when dark)
-                createHotspot(570, 300, 90, 150, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
-                    state.isDark = false; renderScene();
+                // Door Exit (1251x488)
+                createHotspot(1251 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
+                    if (state.isDark) say("I need to find a light source before moving on.");
+                    else say("I should make sure I have everything before leaving.");
                 });
             }
         }
@@ -217,11 +220,13 @@
         const bg = document.getElementById('bg');
         bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
-        // Show world items if room is lit and they haven't been picked up
+        // Handle Room 1 Item Visibility
         ["Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
-            if (!state.isDark && !state.inventory.includes(name)) el.style.display = 'block';
-            else el.style.display = 'none';
+            if (el) {
+                if (!state.isDark && !state.inventory.includes(name)) el.style.display = 'block';
+                else el.style.display = 'none';
+            }
         });
 
         s.setup();
