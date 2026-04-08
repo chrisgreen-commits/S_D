@@ -19,7 +19,6 @@
             transform-origin: bottom center; pointer-events: none;
         }
 
-        /* Interaction Prompt */
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
             padding: 5px 12px; border-radius: 4px; font-weight: bold;
@@ -33,7 +32,6 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; cursor: pointer;
         }
-        #title-screen .sub-title { font-size: 30px; letter-spacing: 5px; color: #be9b7b; margin: 0; }
         #title-screen .main-title { font-size: 37.5px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
         #title-screen p { font-size: 18px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
 
@@ -64,6 +62,7 @@
             padding: 22px; display: none; z-index: 20; color: white; 
             line-height: 1.4; font-size: 22px; cursor: pointer;
         }
+        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; }
         #active-txt-label { font-size: 16px; color: #be9b7b; margin-right: 15px; }
     </style>
 </head>
@@ -75,9 +74,9 @@
     <div id="interact-prompt">PRESS E</div>
 
     <div id="title-screen" onclick="startGame()">
-        <div class="sub-title">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
-        <p>CLICK TO BEGIN (WASD TO MOVE, E TO INTERACT)</p>
+        <p>CLICK TO BEGIN</p>
+        <p style="font-size:14px; margin-top:20px; animation: none;">WASD to move | E to interact</p>
     </div>
 
     <img id="bg" src="Room1_Library.png" style="filter: brightness(0.08);">
@@ -89,7 +88,7 @@
     
     <img id="winter" src="WinterIdle.png">
     
-    <div id="dialogue" onclick="this.style.display='none'"></div>
+    <div id="dialogue" onclick="closeDialogue()"></div>
 
     <div id="inventory-bar">
         <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
@@ -115,7 +114,7 @@
 
     const state = {
         room: 1, inventory: [], activeItem: null,
-        isDark: true, readBook: false,
+        isDark: true, readBook: false, remarkMade: false,
         winterX: 150, winterY: 550, 
         started: false, keys: {},
         interactable: null
@@ -133,16 +132,19 @@
         { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, w: 80, h: 80, action: () => pickup("Books", "ItemBooks.png", "Some old books.") },
         { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, w: 60, h: 80, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
         { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, w: 40, h: 60, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-        { id: "Exit", x: 1130 * SCALE_X, y: 402 * SCALE_Y, w: 120, h: 250, action: () => {
-            if (state.isDark) say("Too dark to leave.", true);
-            else if (!state.readBook) say("I'm missing something in here.", true);
-            else say("Time to see what's through this door...", true);
+        { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, w: 120, h: 250, action: () => {
+            if (state.remarkMade) {
+                say("Heading to Room 2...", true);
+                // Transition logic would go here
+            }
         }}
     ];
 
     window.addEventListener("keydown", e => state.keys[e.code] = true);
     window.addEventListener("keyup", e => state.keys[e.code] = false);
-    window.addEventListener("keydown", e => { if(e.code === "KeyE" && state.interactable) state.interactable.action(); });
+    window.addEventListener("keydown", e => { 
+        if(e.code === "KeyE" && state.interactable) state.interactable.action(); 
+    });
 
     function startGame() {
         if (state.started) return;
@@ -170,7 +172,7 @@
 
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            state.winterY = Math.max(300, Math.min(680, state.winterY + dy)); // Room bounds
+            state.winterY = Math.max(300, Math.min(680, state.winterY + dy));
             
             frameCount++;
             const isAway = dy < 0 && Math.abs(dy) > Math.abs(dx);
@@ -196,10 +198,9 @@
         let found = null;
 
         hotspots.forEach(hs => {
-            // Torch/Items only interactable if not picked up
-            if (state.inventory.includes(hs.id)) return;
-            // Exit only "visible" prompt if torch is found
-            if (hs.id === "Exit" && !state.readBook) return;
+            if (hs.id !== "Exit" && state.inventory.includes(hs.id)) return;
+            // Exit prompt only appears after the remark is made
+            if (hs.id === "Exit" && !state.remarkMade) return;
 
             const dist = Math.sqrt(Math.pow(state.winterX - (hs.x + hs.w/2), 2) + Math.pow(state.winterY - (hs.y + hs.h), 2));
             if (dist < 80) found = hs;
@@ -220,9 +221,19 @@
         if (state.activeItem === "Books") {
             state.readBook = true;
             say("Hmm, a book on King Arthur? This looks interesting! 'Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.'", false);
-            setTimeout(() => say("As tempting as it would be to find a missing relic, I just need to get out of here and find out where 'here' actually is, and why I'm here!", true), 100);
         } else if (!state.activeItem) say("I need to investigate the clues.", true);
-        else say("Nothing much here.", true);
+        else say("Nothing much to see here.", true);
+    }
+
+    function closeDialogue() {
+        const d = document.getElementById('dialogue');
+        // If we just read the book for the first time, trigger the remark
+        if (state.readBook && !state.remarkMade) {
+            state.remarkMade = true;
+            say("As tempting as it would be to find a missing relic, I just need to get out of here and find out where 'here' actually is, and why I'm here!", true);
+        } else {
+            d.style.display = 'none';
+        }
     }
 
     function pickup(name, img, msg) {
@@ -242,10 +253,13 @@
         document.getElementById('s' + idx).classList.add('active-slot');
     }
 
+    let dialogueTimeout;
     function say(msg, autoHide) {
         const d = document.getElementById('dialogue');
-        d.innerText = msg; d.style.display = 'block';
-        if (autoHide) setTimeout(() => d.style.display = 'none', 5000);
+        d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
+        d.style.display = 'block';
+        clearTimeout(dialogueTimeout);
+        if (autoHide) dialogueTimeout = setTimeout(() => d.style.display = 'none', 5000);
     }
 
     function renderScene() {
