@@ -97,6 +97,8 @@
 </div>
 
 <script>
+    // --- SETTINGS & SCALING ---
+    const GLOBAL_VOLUME = 0.25; // 25% Volume for all music
     const SCALE_X = 1280 / 1376;
     const SCALE_Y = 720 / 768;
     const R2_SCALE_X = 1280 / 2629; 
@@ -143,7 +145,6 @@
                 { id: "Back", x: 744 * R2_SCALE_X, y: 759 * R2_SCALE_Y, action: () => changeRoom(1) },
                 { id: "Notepad", x: 1872 * R2_SCALE_X, y: 803 * R2_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
                 { id: "Phone", x: 369 * R2_SCALE_X, y: 1020 * R2_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-                // Moved 50px further left (from 2500 to 2450)
                 { id: "Next", x: 2450 * R2_SCALE_X, y: 600 * R2_SCALE_Y, action: () => handleHallwayExit() } 
             ] 
         },
@@ -179,12 +180,20 @@
         document.getElementById('game-container').style.opacity = "0";
         const m1 = document.getElementById('mus-room1');
         const m2 = document.getElementById('mus-room2');
+        
+        // Ensure volume is applied globally
+        m1.volume = GLOBAL_VOLUME;
+        m2.volume = GLOBAL_VOLUME;
+
         setTimeout(() => {
             state.room = id;
-            m1.pause(); m2.pause();
+            m1.pause(); 
+            m2.pause();
+            
             if (id === 1) { m1.currentTime = 0; m1.play(); state.winterX = 1100; state.winterY = 550; } 
             else if (id === 2) { m2.currentTime = 0; m2.play(); state.winterX = 150; state.winterY = 550; }
             else if (id === 3) { state.winterX = 1100; state.winterY = 550; }
+            
             renderScene();
             document.getElementById('game-container').style.opacity = "1";
         }, 500);
@@ -203,7 +212,7 @@
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            // Wall Restored: Winter cannot go above 60% of screen (720 * 0.4 = 288px)
+            // Invisible Wall at 60% of screen height
             state.winterY = Math.max(432, Math.min(680, state.winterY + dy));
             const winter = document.getElementById('winter');
             winter.style.left = (state.winterX - 62) + 'px';
@@ -219,12 +228,9 @@
             if (["Exit", "Next", "Back", "ExitLeft"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
             if (hs.id === "Exit" && !state.remarkMade) return;
             
-            // Interaction Logic:
-            // Check horizontal distance (within 80px)
             const dx = Math.abs(state.winterX - hs.x);
-            // Check vertical distance (can interact from below, but must be within 250px vertical range)
             const dy = Math.abs(state.winterY - hs.y);
-
+            // Higher tolerance for Y to allow picking items up above the invisible wall
             if (dx < 80 && dy < 250) found = hs;
         });
         if (found) {
