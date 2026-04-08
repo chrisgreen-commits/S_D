@@ -22,7 +22,6 @@
             position: absolute; 
             width: 124px; 
             z-index: 5; 
-            /* Anchor point at the feet (bottom center) */
             transform-origin: bottom center;
             pointer-events: none;
         }
@@ -35,27 +34,35 @@
         }
         #title-screen .sub-title { font-size: 30px; letter-spacing: 5px; color: #be9b7b; margin: 0; }
         #title-screen .main-title { font-size: 37.5px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
-        #title-screen .author { font-size: 20px; letter-spacing: 3px; color: #8a735d; margin-bottom: 40px; }
         #title-screen p { font-size: 18px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
         .world-obj { position: absolute; z-index: 4; pointer-events: none; image-rendering: pixelated; display: none; }
         
-        #inventory { 
+        #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
-            display: flex; align-items: center; padding: 0 30px; z-index: 10;
+            display: flex; align-items: center; padding: 0 20px; z-index: 10;
             box-sizing: border-box; 
         }
-        .slot { width: 65px; height: 65px; border: 2px solid #444; margin-right: 15px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        #investigate-btn {
+            font-size: 40px; cursor: pointer; margin-right: 20px; 
+            background: #222; border: 2px solid #be9b7b; border-radius: 5px;
+            padding: 5px 15px; transition: background 0.2s;
+        }
+        #investigate-btn:hover { background: #333; }
+
+        #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
+        .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .slot img { width: 50px; height: 50px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
         
-        #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 24px; }
+        #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 22px; }
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
         
-        #active-txt-label { margin-left: auto; font-size: 18px; white-space: nowrap; color: #be9b7b; }
+        #active-txt-label { font-size: 16px; white-space: nowrap; color: #be9b7b; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -64,7 +71,6 @@
     <div id="title-screen" onclick="startGame()">
         <div class="sub-title">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
-        <div class="author">By Christopher Green</div>
         <p>CLICK TO BEGIN</p>
     </div>
 
@@ -78,13 +84,21 @@
     <img id="winter" src="WinterIdle.png">
     
     <div id="dialogue"></div>
-    <div id="inventory">
-        <div class="slot" id="s0" onclick="selectItem(0)"></div>
-        <div class="slot" id="s1" onclick="selectItem(1)"></div>
-        <div class="slot" id="s2" onclick="selectItem(2)"></div>
-        <div class="slot" id="s3" onclick="selectItem(3)"></div>
-        <div class="slot" id="s4" onclick="selectItem(4)"></div>
-        <div class="slot" id="s5" onclick="selectItem(5)"></div>
+
+    <div id="inventory-bar">
+        <div id="investigate-btn" title="Investigate Item" onclick="investigateItem()">🔍</div>
+        <div id="slots-container">
+            <div class="slot" id="s0" onclick="selectItem(0)"></div>
+            <div class="slot" id="s1" onclick="selectItem(1)"></div>
+            <div class="slot" id="s2" onclick="selectItem(2)"></div>
+            <div class="slot" id="s3" onclick="selectItem(3)"></div>
+            <div class="slot" id="s4" onclick="selectItem(4)"></div>
+            <div class="slot" id="s5" onclick="selectItem(5)"></div>
+            <div class="slot" id="s6" onclick="selectItem(6)"></div>
+            <div class="slot" id="s7" onclick="selectItem(7)"></div>
+            <div class="slot" id="s8" onclick="selectItem(8)"></div>
+            <div class="slot" id="s9" onclick="selectItem(9)"></div>
+        </div>
         <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
     <div id="click-layer" style="position:absolute; width:100%; height:100%; z-index:7;"></div>
@@ -96,16 +110,14 @@
 
     const state = {
         room: 1, inventory: [], activeItem: null,
-        isDark: true, 
-        // Starting Winter at the far left hotspot area
-        winterX: 50, 
-        winterY: 450, 
+        isDark: true, readBook: false,
+        winterX: 100, winterY: 550, 
         isWalking: false, started: false
     };
 
     const sprites = {
-        side: { idle: "WinterIdle.png", walk: "WinterWalk1.png" },
-        away: { idle: "WinterWalkAway1.png", walk: "WinterWalkAway2.png" }
+        side: { frame1: "WinterIdle.png", frame2: "WinterWalk1.png" },
+        away: { frame1: "WinterWalkAway1.png", frame2: "WinterWalkAway2.png" }
     };
 
     function startGame() {
@@ -114,7 +126,7 @@
         document.getElementById('title-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('title-screen').style.display = 'none';
-            say("It's so dark... I need to find a light.");
+            say("Ugh, my head... It's too dark to see anything.");
         }, 1000);
         updateWinterVisuals();
         renderScene();
@@ -123,7 +135,6 @@
     function updateWinterVisuals() {
         const winter = document.getElementById('winter');
         const currentScale = 0.75 + (0.25 * (state.winterY / 720));
-        // Offset so X/Y refers to the bottom-center of her feet
         winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
         winter.style.top = (state.winterY - (160 * currentScale)) + 'px'; 
         winter.style.transform = `scale(${currentScale})`;
@@ -133,8 +144,7 @@
         if (state.isWalking || !state.started) return;
         state.isWalking = true;
         const winter = document.getElementById('winter');
-        
-        const speed = 4.5;
+        const speed = 5;
         let frameCount = 0;
 
         const step = () => {
@@ -143,25 +153,24 @@
             const distance = Math.sqrt(dx*dx + dy*dy);
 
             if (distance < speed) {
-                state.winterX = targetX;
-                state.winterY = targetY;
+                state.winterX = targetX; state.winterY = targetY;
                 state.isWalking = false;
-                // Face "Away" idle if moving up, otherwise "Side" idle
-                winter.src = (dy < -2 && Math.abs(dy) > Math.abs(dx)) ? sprites.away.idle : sprites.side.idle;
+                winter.src = (dy < -2 && Math.abs(dy) > Math.abs(dx)) ? sprites.away.frame1 : sprites.side.frame1;
                 updateWinterVisuals();
                 if (callback) callback();
                 return;
             }
 
-            const movingAway = dy < -1 && Math.abs(dy) > Math.abs(dx);
-            const currentSet = movingAway ? sprites.away : sprites.side;
+            const isAway = dy < -1 && Math.abs(dy) > Math.abs(dx);
+            const currentSet = isAway ? sprites.away : sprites.side;
             const flip = dx < 0 ? "scaleX(-1)" : "scaleX(1)";
             
             state.winterX += (dx / distance) * speed;
             state.winterY += (dy / distance) * speed;
 
             frameCount++;
-            winter.src = (Math.floor(frameCount / 12) % 2 === 0) ? currentSet.walk : currentSet.idle;
+            // Cycle strictly between the two requested frames
+            winter.src = (Math.floor(frameCount / 10) % 2 === 0) ? currentSet.frame1 : currentSet.frame2;
             
             const currentScale = 0.75 + (0.25 * (state.winterY / 720));
             winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
@@ -170,8 +179,23 @@
 
             requestAnimationFrame(step);
         };
-
         requestAnimationFrame(step);
+    }
+
+    function investigateItem() {
+        if (!state.activeItem) {
+            say("I need to investigate the clues.");
+            return;
+        }
+
+        if (state.activeItem === "Books") {
+            state.readBook = true;
+            say("Hmm, a book on King Arthur? This looks interesting! 'Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.'");
+        } else if (state.activeItem === "Torch") {
+            say("A standard torch. It's the only reason I can see right now.");
+        } else {
+            say("Not much to see here, I need to look at other clues.");
+        }
     }
 
     function setObjPos(id, rawX, rawY, w) {
@@ -184,29 +208,28 @@
 
     const scenes = {
         1: {
-            bg: "Room1_Library.png",
             setup: () => {
                 setObjPos("obj-Torch", 608, 407, 60);
                 createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
                     if (state.isDark) {
-                        pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
-                        state.isDark = false; 
-                        renderScene();
+                        pickup("Torch", "ItemTorch.png", "A torch! This should help.");
+                        state.isDark = false; renderScene();
                     }
                 });
 
                 setObjPos("obj-Books", 951, 310, 75);
-                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting."));
+                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Found some old books."));
 
                 setObjPos("obj-Vase", 779, 302, 50);
-                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "An old ceramic vase."));
+                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "Just an old vase."));
 
                 setObjPos("obj-Card", 436, 180, 30);
-                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock."));
+                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card?"));
 
                 createHotspot(1253 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("I'm not going anywhere in the dark.");
-                    else say("I should look around more.");
+                    if (state.isDark) say("I'm not wandering into that hallway in the dark.");
+                    else if (!state.readBook) say("I feel like I'm missing something important in this room.");
+                    else say("Avalon... that's where I need to go.");
                 });
             }
         }
@@ -217,19 +240,13 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = (e) => {
-            e.stopPropagation();
-            // Move to bottom of hotspot
-            moveWinter(x + (w/2), y + h, action);
-        };
+        hs.onclick = (e) => { e.stopPropagation(); moveWinter(x + (w/2), y + h, action); };
         document.getElementById('click-layer').appendChild(hs);
     }
 
     document.getElementById('click-layer').onclick = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-        moveWinter(clickX, clickY);
+        moveWinter(e.clientX - rect.left, e.clientY - rect.top);
     };
 
     function pickup(name, img, msg) {
@@ -253,7 +270,7 @@
     function say(msg) {
         const d = document.getElementById('dialogue');
         d.innerText = msg; d.style.display = 'block';
-        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4000);
+        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 6000);
     }
 
     function renderScene() {
