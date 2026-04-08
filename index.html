@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shadows & Daylight: Excalibur's Labyrinth</title>
+    <title>Shadows & Daylight: Labyrinth of Excalibur</title>
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: auto; }
         
-        /* Updated to 16:9 Ratio (1280x720) */
         #game-container { 
             position: relative; 
             width: 1280px; 
@@ -19,7 +18,6 @@
 
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        /* Character heights adjusted slightly for the shorter 720px height */
         #winter { position: absolute; bottom: 110px; width: 124px; z-index: 5; transition: left linear; }
         #npc { position: absolute; bottom: 110px; right: 150px; width: 135px; display: none; z-index: 4; }
         
@@ -38,7 +36,6 @@
 
         .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
         
-        /* Inventory container now uses box-sizing to prevent bleeding */
         #inventory { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
@@ -50,7 +47,7 @@
         .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
         
         #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 24px; }
-        .hotspot { position: absolute; cursor: pointer; z-index: 8; /* background: rgba(255,0,0,0.2); // Debug: Uncomment to see hotspots */ }
+        .hotspot { position: absolute; cursor: pointer; z-index: 8; }
         
         #active-txt-label { margin-left: auto; font-size: 18px; white-space: nowrap; color: #be9b7b; }
     </style>
@@ -60,13 +57,14 @@
 <div id="game-container">
     <div id="title-screen" onclick="startGame()">
         <div class="sub-title">SHADOWS & DAYLIGHT</div>
-        <div class="main-title">EXCALIBUR'S LABYRINTH</div>
+        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <div class="author">By Christopher Green</div>
         <p>CLICK TO BEGIN</p>
     </div>
 
     <img id="bg" src="Room1_Library.png">
     
+    <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
     <img id="obj-Books" src="ItemBooks.png" class="world-obj">
     <img id="obj-Vase" src="ItemVase.png" class="world-obj">
     <img id="obj-Card" src="ItemCard.png" class="world-obj">
@@ -89,7 +87,6 @@
 </div>
 
 <script>
-    // Exact mapping from 1376x768 (Source) to 1280x720 (Game)
     const SCALE_X = 1280 / 1376;
     const SCALE_Y = 720 / 768;
 
@@ -149,34 +146,37 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Torch
-                createHotspot(570 * SCALE_X, 300 * SCALE_Y, 90, 150, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
-                    state.isDark = false; 
-                    renderScene();
+                // Torch (608x407)
+                setObjPos("obj-Torch", 608, 407, 60);
+                createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
+                    if (state.isDark) {
+                        pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
+                        state.isDark = false; 
+                        renderScene();
+                    }
                 });
 
-                // Books (1030x335)
-                setObjPos("obj-Books", 1030, 335, 70);
-                createHotspot(1030 * SCALE_X, 335 * SCALE_Y, 80, 80, "Books", () => {
+                // Books (1016x344)
+                setObjPos("obj-Books", 1016, 344, 75);
+                createHotspot(1016 * SCALE_X, 344 * SCALE_Y, 80, 80, "Books", () => {
                     pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting.");
                 });
 
-                // Vase (841x379)
-                setObjPos("obj-Vase", 841, 379, 50);
-                createHotspot(841 * SCALE_X, 379 * SCALE_Y, 60, 80, "Vase", () => {
+                // Vase (822x386)
+                setObjPos("obj-Vase", 822, 386, 50);
+                createHotspot(822 * SCALE_X, 386 * SCALE_Y, 60, 80, "Vase", () => {
                     pickup("Vase", "ItemVase.png", "An old ceramic vase.");
                 });
 
-                // Card (470x206)
-                setObjPos("obj-Card", 470, 206, 30);
-                createHotspot(470 * SCALE_X, 206 * SCALE_Y, 50, 50, "Card", () => {
+                // Card (458x208)
+                setObjPos("obj-Card", 458, 208, 30);
+                createHotspot(458 * SCALE_X, 208 * SCALE_Y, 40, 60, "Card", () => {
                     pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock.");
                 });
 
-                // Exit (1251x488)
-                createHotspot(1251 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("Too dark to move...");
+                // Exit (1253x488)
+                createHotspot(1253 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
+                    if (state.isDark) say("I'm not going anywhere in the dark.");
                     else say("I should look around more.");
                 });
             }
@@ -225,6 +225,13 @@
         const bg = document.getElementById('bg');
         bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
+        // Torch is visible if it's dark OR if it hasn't been picked up yet
+        const torchEl = document.getElementById('obj-Torch');
+        if (torchEl) {
+            torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
+        }
+
+        // Room 1 Item Visibility (revealed after lighting)
         ["Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
             if (el) {
