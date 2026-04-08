@@ -11,8 +11,6 @@
             background: #000; overflow: hidden; transition: opacity 0.5s;
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
-        
-        /* Winter at 75% size */
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         
         #interact-prompt {
@@ -79,6 +77,9 @@
     <img id="obj-Card" src="ItemCard.png" class="world-obj">
     <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj">
     <img id="obj-Phone" src="ItemPhone.png" class="world-obj">
+    <img id="obj-Balls" src="ItemBalls.png" class="world-obj">
+    <img id="obj-Cue" src="ItemCue.png" class="world-obj">
+    <img id="obj-Mug" src="ItemMug.png" class="world-obj">
     
     <img id="winter" src="WinterIdle.png">
     
@@ -93,6 +94,9 @@
             <div class="slot" id="s3" onclick="selectItem(3)"></div>
             <div class="slot" id="s4" onclick="selectItem(4)"></div>
             <div class="slot" id="s5" onclick="selectItem(5)"></div>
+            <div class="slot" id="s6" onclick="selectItem(6)"></div>
+            <div class="slot" id="s7" onclick="selectItem(7)"></div>
+            <div class="slot" id="s8" onclick="selectItem(8)"></div>
         </div>
         <div id="investigate-btn" onclick="investigateItem()">🔍</div>
     </div>
@@ -104,6 +108,9 @@
     const SCALE_Y = 720 / 768;
     const R2_SCALE_X = 1280 / 2629; 
     const R2_SCALE_Y = 720 / 1479;
+    // Assuming Room 3 shares the Hallway aspect ratio/resolution
+    const R3_SCALE_X = 1280 / 2629; 
+    const R3_SCALE_Y = 720 / 1479;
 
     const state = {
         room: 1, inventory: [], activeItem: null,
@@ -152,7 +159,10 @@
         3: { 
             bg: "Room3_Billiards.png", 
             hotspots: [ 
-                { id: "ExitLeft", x: 100, y: 450, action: () => say("This door is also locked.", true) } 
+                { id: "ExitLeft", x: 100 * R3_SCALE_X, y: 450 * R3_SCALE_Y, action: () => say("This door is also locked.", true) },
+                { id: "Balls", x: 2000 * R3_SCALE_X, y: 1000 * R3_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+                { id: "Cue", x: 2050 * R3_SCALE_X, y: 1020 * R3_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+                { id: "Mug", x: 1250 * R3_SCALE_X, y: 1040 * R3_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") }
             ] 
         }
     };
@@ -223,7 +233,6 @@
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            // Invisible Wall updated to 70% height (720 * 0.3 = 216 limit)
             state.winterY = Math.max(216, Math.min(680, state.winterY + dy));
             const winter = document.getElementById('winter');
             winter.style.left = (state.winterX - 46) + 'px'; 
@@ -241,7 +250,6 @@
             
             const dx = Math.abs(state.winterX - hs.x);
             const dy = Math.abs(state.winterY - hs.y);
-            // Tolerance allows interaction with items "above" the walk limit
             if (dx < 80 && dy < 250) found = hs;
         });
         if (found) {
@@ -274,7 +282,11 @@
     function pickup(name, img, msg) {
         state.inventory.push(name);
         document.getElementById('obj-'+name).style.display = 'none';
-        document.getElementById('s'+(state.inventory.length-1)).innerHTML = `<img src="${img}">`;
+        // Display item in inventory slots
+        const slotIdx = state.inventory.length - 1;
+        if(slotIdx < 9) {
+            document.getElementById('s' + slotIdx).innerHTML = `<img src="${img}">`;
+        }
         say(msg, true);
     }
 
@@ -290,7 +302,7 @@
         const d = document.getElementById('dialogue');
         d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
         d.style.display = 'block';
-        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
+        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 5000);
     }
 
     function renderScene() {
@@ -298,7 +310,8 @@
         document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
-        ["Torch", "Books", "Vase", "Card", "Notepad", "Phone"].forEach(name => {
+        const allItems = ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"];
+        allItems.forEach(name => {
             const el = document.getElementById('obj-' + name);
             if (!el) return;
             const hs = s.hotspots.find(h => h.id === name);
