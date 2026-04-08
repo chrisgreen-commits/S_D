@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>S&D: Excalibur's Labyrinth</title>
+    <title>Shadows & Daylight: Excalibur's Labyrinth</title>
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
         #game-container { position: relative; width: 800px; height: 600px; margin: 20px auto; border: 4px solid #be9b7b; background: #000; }
@@ -10,15 +10,17 @@
         #winter { position: absolute; bottom: 80px; width: 110px; z-index: 5; transition: left linear; }
         #npc { position: absolute; bottom: 80px; right: 100px; width: 120px; display: none; z-index: 4; }
         
-        /* Cinematic Title Overlay */
+        /* Updated Title Overlay */
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.4); z-index: 100;
+            background: rgba(0,0,0,0.6); z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; transition: opacity 1s;
+            text-align: center; transition: opacity 1s; cursor: pointer;
         }
-        #title-screen h1 { font-size: 42px; letter-spacing: 5px; color: #fff; text-shadow: 0 0 15px #be9b7b; margin: 0; }
-        #title-screen p { font-size: 14px; letter-spacing: 2px; color: #be9b7b; margin-top: 20px; animation: blink 2s infinite; }
+        #title-screen .sub-title { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 0; }
+        #title-screen .main-title { font-size: 42px; letter-spacing: 6px; color: #fff; text-shadow: 0 0 15px #be9b7b; margin: 10px 0; }
+        #title-screen .author { font-size: 16px; letter-spacing: 2px; color: #8a735d; margin-bottom: 40px; }
+        #title-screen p { font-size: 14px; letter-spacing: 2px; color: #be9b7b; animation: blink 2s infinite; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
@@ -35,17 +37,21 @@
 
 <div id="game-container">
     <div id="title-screen" onclick="startGame()">
-        <h1>SHADOWS & DAYLIGHT</h1>
-        <h1 style="font-size: 24px;">EXCALIBUR'S LABYRINTH</h1>
-        <p>CLICK ANYWHERE TO BEGIN</p>
+        <div class="sub-title">SHADOWS & DAYLIGHT</div>
+        <div class="main-title">EXCALIBUR'S LABYRINTH</div>
+        <div class="author">By Christopher Green</div>
+        <p>CLICK TO BEGIN</p>
     </div>
 
     <img id="bg" src="Room1_Library.png">
     
     <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 400px; top: 410px; width: 35px;">
     <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 600px; top: 460px; width: 25px;">
+    <img id="obj-Books" src="ItemBooks.png" class="world-obj" style="left: 550px; top: 250px; width: 45px;">
+    
     <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 300px; top: 320px; width: 25px;">
     <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 500px; top: 320px; width: 35px;">
+    
     <img id="obj-Cue" src="ItemCue.png" class="world-obj" style="left: 120px; top: 350px; width: 80px;">
     <img id="obj-Balls" src="ItemBalls.png" class="world-obj" style="left: 150px; top: 380px; width: 30px;">
     
@@ -119,7 +125,8 @@
                     state.isDark = false; renderScene();
                 });
                 createHotspot(400, 400, 60, 60, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
-                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card."));
+                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card. This might be useful for a lock."));
+                createHotspot(550, 250, 60, 60, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting, but I have bigger problems."));
                 createHotspot(750, 50, 50, 500, "Exit", () => {
                     if (state.isDark) say("I need a light first.");
                     else changeRoom(2, 50); 
@@ -150,7 +157,7 @@
                 createHotspot(200, 100, 100, 200, "Window", () => say("High in the mountains... looks like Europe."));
                 createHotspot(120, 350, 100, 100, "Pool Table", () => {
                     pickup("Cue", "ItemCue.png", "A pool cue... might work as a weapon.");
-                    setTimeout(() => pickup("Balls", "ItemBalls.png", "I'll grab these balls too."), 1000);
+                    setTimeout(() => pickup("Balls", "ItemBalls.png", "I'll grab these pool balls too."), 1000);
                 });
                 createHotspot(600, 150, 120, 250, "Fireplace", () => {
                     if (state.activeItem === "Vase") triggerSecretPassage();
@@ -187,7 +194,7 @@
         setTimeout(() => {
             state.cutscene = false;
             moveWinter(850, () => changeRoom(5, 50));
-        }, 10000);
+        }, 11000);
     }
 
     function createHotspot(x, y, w, h, name, action) {
@@ -221,7 +228,7 @@
         const d = document.getElementById('dialogue');
         d.innerText = msg;
         d.style.display = 'block';
-        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4000);
+        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4500);
     }
 
     function changeRoom(n, startX) {
@@ -246,6 +253,7 @@
             if (state.room === 1) {
                 if (!state.inventory.includes("Vase")) document.getElementById('obj-Vase').style.display = 'block';
                 if (!state.inventory.includes("Card")) document.getElementById('obj-Card').style.display = 'block';
+                if (!state.inventory.includes("Books")) document.getElementById('obj-Books').style.display = 'block';
             }
             if (state.room === 2) {
                 if (!state.inventory.includes("Phone")) document.getElementById('obj-Phone').style.display = 'block';
@@ -258,8 +266,6 @@
         }
         s.setup();
     }
-
-    // Manual start required via clicking Title
 </script>
 </body>
 </html>
