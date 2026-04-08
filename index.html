@@ -138,8 +138,8 @@
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
-            { id: "Balls", x: (2000-100) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
-            { id: "Cue", x: (2050+100) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
             { id: "Mug", x: 1250 * R_W_SCALE_X, y: (1040-200+50) * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
             { id: "Window", x: 957 * R_W_SCALE_X, y: 656 * R_W_SCALE_Y, action: () => say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.", true) }
@@ -201,18 +201,26 @@
 
         setTimeout(() => {
             state.room = id;
-            m1.pause();
-            m2.pause();
-
+            
+            // Handle Music Logic
             if (id === 1) { 
+                m2.pause();
+                m2.currentTime = 0; // Completely stop Room 2 music
                 state.winterX = isInitial ? 80 : 1100; 
                 m1.volume = GLOBAL_VOLUME;
                 m1.play();
-            } else { 
+            } else if (id === 2) {
+                m1.pause();
                 state.winterX = 80; 
                 m2.volume = GLOBAL_VOLUME;
                 m2.play();
+            } else if (id === 3) {
+                m2.pause();
+                m2.currentTime = 0; // Completely stop Room 2 music
+                state.winterX = 80; 
+                // Currently Room 3 has no specific music assigned
             }
+            
             state.winterY = 550;
 
             const winter = document.getElementById('winter');
