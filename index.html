@@ -108,7 +108,6 @@
     const SCALE_Y = 720 / 768;
     const R2_SCALE_X = 1280 / 2629; 
     const R2_SCALE_Y = 720 / 1479;
-    // Assuming Room 3 shares the Hallway aspect ratio/resolution
     const R3_SCALE_X = 1280 / 2629; 
     const R3_SCALE_Y = 720 / 1479;
 
@@ -116,56 +115,77 @@
         room: 1, inventory: [], activeItem: null,
         isDark: true, dialogueStep: 0, remarkMade: false,
         winterX: 80, winterY: 550, started: false, keys: {},
-        interactable: null
+        interactable: null, vasePlaced: false, cutsceneStep: 0
     };
 
     const dialogueSequences = {
-        "Books": [
-            "Hmm, a book about King Arthur.",
-            "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.",
-            "As tempting as it would be to find a missing relic, I'm interested in getting out of here and finding out where I am and how I got there."
-        ],
-        "Phone": [
-            "I wonder who this belongs too? It's an older cell phone. Early 2000s.",
-            "The contact page says, Detective Ambrose Smith."
-        ],
-        "Notepad": [
-            "A notepad?",
-            "There's a note here, 'I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here.'",
-            "I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Detective Smith.'"
-        ]
+        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon...", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
+        "Phone": ["I wonder who this belongs too? Early 2000s.", "The contact page says, Detective Ambrose Smith."],
+        "Notepad": ["A notepad?", "There's a note here, 'I've failed. I can't find the sword...' - Detective Smith.'"]
     };
 
     const scenes = {
-        1: {
-            bg: "Room1_Library.png",
-            hotspots: [
-                { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
-                { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
-                { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
-                { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-                { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); } }
-            ]
-        },
-        2: { 
-            bg: "Room2_Hallway.png", 
-            hotspots: [ 
-                { id: "Back", x: 744 * R2_SCALE_X, y: 759 * R2_SCALE_Y, action: () => changeRoom(1) },
-                { id: "Notepad", x: 1872 * R2_SCALE_X, y: 803 * R2_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
-                { id: "Phone", x: 369 * R2_SCALE_X, y: 1020 * R2_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-                { id: "Next", x: 2450 * R2_SCALE_X, y: 600 * R2_SCALE_Y, action: () => handleHallwayExit() } 
-            ] 
-        },
-        3: { 
-            bg: "Room3_Billiards.png", 
-            hotspots: [ 
-                { id: "ExitLeft", x: 100 * R3_SCALE_X, y: 450 * R3_SCALE_Y, action: () => say("This door is also locked.", true) },
-                { id: "Balls", x: 2000 * R3_SCALE_X, y: 1000 * R3_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
-                { id: "Cue", x: 2050 * R3_SCALE_X, y: 1020 * R3_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
-                { id: "Mug", x: 1250 * R3_SCALE_X, y: 1040 * R3_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") }
-            ] 
-        }
+        1: { bg: "Room1_Library.png", hotspots: [
+            { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
+            { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
+            { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
+            { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
+            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); } }
+        ]},
+        2: { bg: "Room2_Hallway.png", hotspots: [ 
+            { id: "Back", x: 744 * R2_SCALE_X, y: 759 * R2_SCALE_Y, action: () => changeRoom(1) },
+            { id: "Notepad", x: 1872 * R2_SCALE_X, y: 803 * R2_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
+            { id: "Phone", x: 369 * R2_SCALE_X, y: 1020 * R2_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
+            { id: "Next", x: 2450 * R2_SCALE_X, y: 600 * R2_SCALE_Y, action: () => handleHallwayExit() } 
+        ]},
+        3: { bg: "Room3_Billiards.png", hotspots: [ 
+            { id: "ExitLeft", x: 100 * R3_SCALE_X, y: 450 * R3_SCALE_Y, action: () => say("This door is also locked.", true) },
+            { id: "Balls", x: 2000 * R3_SCALE_X, y: 1000 * R3_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Cue", x: 2050 * R3_SCALE_X, y: 1020 * R3_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Mug", x: 1250 * R3_SCALE_X, y: 1040 * R3_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "Hmm. Well, if this place has a coffee machine, this might come in handy.") },
+            { id: "Flower", x: 1796 * R3_SCALE_X, y: 692 * R3_SCALE_Y, action: () => handleFlower() }
+        ]}
     };
+
+    function handleFlower() {
+        if (state.vasePlaced) {
+            changeRoom(5);
+        } else if (state.activeItem === "Vase") {
+            state.cutsceneStep = 1;
+            document.getElementById('bg').src = "Room3_Billiards2.png";
+            say("Much better!", false);
+        } else {
+            say("Someone dumped this flower here? Odd. Shame to let it go to waste.", true);
+        }
+    }
+
+    function advanceDialogue() {
+        const d = document.getElementById('dialogue');
+        const winter = document.getElementById('winter');
+
+        // Cutscene Logic for Room 3 Flower
+        if (state.cutsceneStep === 1) {
+            state.cutsceneStep = 2;
+            winter.src = "WinterIdleShock.png";
+            say("W-What's that noise?", false);
+        } else if (state.cutsceneStep === 2) {
+            state.cutsceneStep = 0;
+            state.vasePlaced = true;
+            document.getElementById('bg').src = "Room3_Billiards3.png";
+            winter.src = "WinterIdle.png";
+            d.style.display = 'none';
+        } else {
+            // Standard Dialogue Logic
+            const seq = dialogueSequences[state.activeItem];
+            if (seq && state.dialogueStep < seq.length) {
+                say(seq[state.dialogueStep], false);
+                state.dialogueStep++;
+            } else {
+                if (state.activeItem === "Books") state.remarkMade = true;
+                d.style.display = 'none';
+            }
+        }
+    }
 
     function handleHallwayExit() {
         if (state.activeItem === "Card") {
@@ -191,30 +211,14 @@
         document.getElementById('game-container').style.opacity = "0";
         const m1 = document.getElementById('mus-room1');
         const m2 = document.getElementById('mus-room2');
-        
-        m1.volume = GLOBAL_VOLUME;
-        m2.volume = GLOBAL_VOLUME;
+        m1.volume = m2.volume = GLOBAL_VOLUME;
 
         setTimeout(() => {
             state.room = id;
-            m1.pause(); 
-            m2.pause();
-            
-            if (id === 1) { 
-                m1.currentTime = 0; m1.play(); 
-                state.winterX = isInitial ? 80 : 1100; 
-                state.winterY = 550; 
-            } 
-            else if (id === 2) { 
-                m2.currentTime = 0; m2.play(); 
-                state.winterX = 150; 
-                state.winterY = 550; 
-            }
-            else if (id === 3) { 
-                state.winterX = 80; 
-                state.winterY = 550; 
-            }
-            
+            m1.pause(); m2.pause();
+            if (id === 1) { m1.currentTime = 0; m1.play(); state.winterX = isInitial ? 80 : 1100; state.winterY = 550; } 
+            else if (id === 2) { m2.currentTime = 0; m2.play(); state.winterX = 150; state.winterY = 550; }
+            else if (id === 3) { state.winterX = 80; state.winterY = 550; }
             renderScene();
             document.getElementById('game-container').style.opacity = "1";
         }, 500);
@@ -228,6 +232,7 @@
     }
 
     function updateMovement() {
+        if (state.cutsceneStep > 0) return; // Freeze movement during cutscene
         let dx = 0, dy = 0;
         if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
@@ -245,9 +250,8 @@
         const prompt = document.getElementById('interact-prompt');
         let found = null;
         scenes[state.room].hotspots.forEach(hs => {
-            if (["Exit", "Next", "Back", "ExitLeft"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
+            if (["Exit", "Next", "Back", "ExitLeft", "Flower"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
             if (hs.id === "Exit" && !state.remarkMade) return;
-            
             const dx = Math.abs(state.winterX - hs.x);
             const dy = Math.abs(state.winterY - hs.y);
             if (dx < 80 && dy < 250) found = hs;
@@ -267,26 +271,11 @@
         } else if (state.activeItem) say("Nothing remarkable about this.", true);
     }
 
-    function advanceDialogue() {
-        const d = document.getElementById('dialogue');
-        const seq = dialogueSequences[state.activeItem];
-        if (seq && state.dialogueStep < seq.length) {
-            say(seq[state.dialogueStep], false);
-            state.dialogueStep++;
-        } else {
-            if (state.activeItem === "Books") state.remarkMade = true;
-            d.style.display = 'none';
-        }
-    }
-
     function pickup(name, img, msg) {
         state.inventory.push(name);
         document.getElementById('obj-'+name).style.display = 'none';
-        // Display item in inventory slots
-        const slotIdx = state.inventory.length - 1;
-        if(slotIdx < 9) {
-            document.getElementById('s' + slotIdx).innerHTML = `<img src="${img}">`;
-        }
+        const idx = state.inventory.length - 1;
+        if(idx < 9) document.getElementById('s' + idx).innerHTML = `<img src="${img}">`;
         say(msg, true);
     }
 
@@ -302,28 +291,20 @@
         const d = document.getElementById('dialogue');
         d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
         d.style.display = 'block';
-        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 5000);
+        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
     }
 
     function renderScene() {
         const s = scenes[state.room];
         document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
-        
-        const allItems = ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"];
-        allItems.forEach(name => {
+        ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name);
             if (!el) return;
             const hs = s.hotspots.find(h => h.id === name);
             if (hs && !state.inventory.includes(name)) {
                 el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
-                
-                if (state.room === 2 && (name === "Phone" || name === "Notepad")) {
-                    el.style.width = "35px";
-                } else {
-                    el.style.width = "70px";
-                }
-
+                el.style.width = (state.room === 2 && (name === "Phone" || name === "Notepad")) ? "35px" : "70px";
                 if (state.room === 1 && state.isDark && name !== "Torch") el.style.display = 'none';
                 else el.style.display = 'block';
             } else el.style.display = 'none';
