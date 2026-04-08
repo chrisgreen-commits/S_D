@@ -61,6 +61,8 @@
 <div id="game-container">
     <audio id="mus-room1" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room2" loop><source src="Yacoby_Schwartzy.mp3" type="audio/mpeg"></audio>
+    <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
+    <audio id="mus-room5" loop><source src="Stats_The_Grey_Room_Density_Time.mp3" type="audio/mpeg"></audio>
     
     <div id="interact-prompt">PRESS E</div>
     
@@ -112,7 +114,7 @@
 </div>
 
 <script>
-    const GLOBAL_VOLUME = 0.25; 
+    const GLOBAL_VOLUME = 0.10; 
     const SCALE_X = 1280 / 1376;
     const SCALE_Y = 720 / 768;
     const R_W_SCALE_X = 1280 / 2629; 
@@ -200,7 +202,6 @@
             document.getElementById('bg').src = "Room3_Billiards3.png";
             d.style.display = 'none';
         } else {
-            // Restore investigate logic
             const seq = dialogueSequences[state.activeItem];
             if (seq && state.dialogueStep < seq.length) {
                 say(seq[state.dialogueStep], false);
@@ -237,24 +238,38 @@
     }
 
     function changeRoom(id, isInitial = false) {
-        const m1 = document.getElementById('mus-room1');
-        const m2 = document.getElementById('mus-room2');
+        const musicMap = {
+            1: document.getElementById('mus-room1'),
+            2: document.getElementById('mus-room2'),
+            3: document.getElementById('mus-room3'),
+            5: document.getElementById('mus-room5')
+        };
+
         document.getElementById('game-container').style.opacity = "0";
 
         setTimeout(() => {
-            state.room = id;
-            m1.pause(); m2.pause(); m2.currentTime = 0;
+            // Stop ALL music before starting new room track
+            Object.values(musicMap).forEach(m => {
+                if (m) {
+                    m.pause();
+                    m.currentTime = 0;
+                }
+            });
 
-            if (id === 1) { 
-                state.winterX = isInitial ? 80 : 1100; 
-                m1.volume = GLOBAL_VOLUME; m1.play();
-            } else if (id === 2) {
-                state.winterX = 80; m2.volume = GLOBAL_VOLUME; m2.play();
-            } else {
-                state.winterX = 80;
-            }
+            state.room = id;
+            
+            if (id === 1) state.winterX = isInitial ? 80 : 1100;
+            else state.winterX = 80;
             
             state.winterY = 550;
+
+            // Start new room music
+            const currentMus = musicMap[id];
+            if (currentMus) {
+                currentMus.volume = GLOBAL_VOLUME;
+                currentMus.play();
+            }
+
             const winter = document.getElementById('winter');
             if (id === 5) winter.classList.add('small');
             else winter.classList.remove('small');
