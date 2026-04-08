@@ -4,26 +4,27 @@
     <meta charset="UTF-8">
     <title>Shadows & Daylight: Labyrinth of Excalibur</title>
     <style>
-        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: auto; }
+        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
         
         #game-container { 
-            position: relative; 
-            width: 1280px; 
-            height: 720px; 
-            margin: 40px auto; 
-            border: 6px solid #be9b7b; 
-            background: #000; 
-            overflow: hidden;
+            position: relative; width: 1280px; height: 720px; 
+            margin: 40px auto; border: 6px solid #be9b7b; 
+            background: #000; overflow: hidden;
         }
 
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
         #winter { 
-            position: absolute; 
-            width: 124px; 
-            z-index: 5; 
-            transform-origin: bottom center;
-            pointer-events: none;
+            position: absolute; width: 124px; z-index: 5; 
+            transform-origin: bottom center; pointer-events: none;
+        }
+
+        /* Interaction Prompt */
+        #interact-prompt {
+            position: absolute; background: rgba(255,255,255,0.9); color: #000;
+            padding: 5px 12px; border-radius: 4px; font-weight: bold;
+            font-size: 20px; z-index: 50; display: none; transform: translate(-50%, -100%);
+            pointer-events: none; border: 2px solid #be9b7b;
         }
         
         #title-screen {
@@ -38,22 +39,19 @@
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        .world-obj { position: absolute; z-index: 4; pointer-events: none; image-rendering: pixelated; display: none; }
+        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
             display: flex; align-items: center; padding: 0 20px; z-index: 10;
-            box-sizing: border-box; 
         }
 
         #investigate-btn {
             font-size: 40px; cursor: pointer; margin-left: 20px; 
             background: #222; border: 2px solid #be9b7b; border-radius: 5px;
-            padding: 5px 15px; transition: background 0.2s;
-            user-select: none;
+            padding: 5px 15px; user-select: none;
         }
-        #investigate-btn:hover { background: #333; }
 
         #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
         .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -66,23 +64,20 @@
             padding: 22px; display: none; z-index: 20; color: white; 
             line-height: 1.4; font-size: 22px; cursor: pointer;
         }
-        #dialogue:after { content: " [Click to Close]"; font-size: 14px; color: #be9b7b; }
-
-        .hotspot { position: absolute; cursor: pointer; z-index: 8; }
-        #active-txt-label { font-size: 16px; white-space: nowrap; color: #be9b7b; margin-right: 15px; }
+        #active-txt-label { font-size: 16px; color: #be9b7b; margin-right: 15px; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <audio id="bg-music" loop>
-        <source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="bg-music" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
+
+    <div id="interact-prompt">PRESS E</div>
 
     <div id="title-screen" onclick="startGame()">
         <div class="sub-title">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
-        <p>CLICK TO BEGIN</p>
+        <p>CLICK TO BEGIN (WASD TO MOVE, E TO INTERACT)</p>
     </div>
 
     <img id="bg" src="Room1_Library.png" style="filter: brightness(0.08);">
@@ -110,9 +105,8 @@
             <div class="slot" id="s8" onclick="selectItem(8)"></div>
             <div class="slot" id="s9" onclick="selectItem(9)"></div>
         </div>
-        <div id="investigate-btn" title="Investigate Item" onclick="investigateItem()">🔍</div>
+        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
     </div>
-    <div id="click-layer" style="position:absolute; width:100%; height:100%; z-index:7;"></div>
 </div>
 
 <script>
@@ -122,8 +116,9 @@
     const state = {
         room: 1, inventory: [], activeItem: null,
         isDark: true, readBook: false,
-        winterX: 100, winterY: 550, 
-        isWalking: false, started: false
+        winterX: 150, winterY: 550, 
+        started: false, keys: {},
+        interactable: null
     };
 
     const sprites = {
@@ -131,160 +126,111 @@
         away: { frame1: "WinterWalkAway1.png", frame2: "WinterWalkAway2.png" }
     };
 
-    window.onload = () => {
-        updateWinterVisuals();
-        // Set Music Volume to 50%
-        const music = document.getElementById('bg-music');
-        music.volume = 0.5;
-    };
+    const hotspots = [
+        { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, w: 70, h: 100, action: () => {
+            if (state.isDark) { pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark = false; renderScene(); }
+        }},
+        { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, w: 80, h: 80, action: () => pickup("Books", "ItemBooks.png", "Some old books.") },
+        { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, w: 60, h: 80, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
+        { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, w: 40, h: 60, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
+        { id: "Exit", x: 1130 * SCALE_X, y: 402 * SCALE_Y, w: 120, h: 250, action: () => {
+            if (state.isDark) say("Too dark to leave.", true);
+            else if (!state.readBook) say("I'm missing something in here.", true);
+            else say("Time to see what's through this door...", true);
+        }}
+    ];
+
+    window.addEventListener("keydown", e => state.keys[e.code] = true);
+    window.addEventListener("keyup", e => state.keys[e.code] = false);
+    window.addEventListener("keydown", e => { if(e.code === "KeyE" && state.interactable) state.interactable.action(); });
 
     function startGame() {
         if (state.started) return;
         state.started = true;
         const music = document.getElementById('bg-music');
-        if (state.room === 1) music.play().catch(e => console.log("Audio blocked."));
-        document.getElementById('title-screen').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('title-screen').style.display = 'none';
-            say("Ugh, my head... It's too dark to see anything.", true);
-        }, 1000);
+        music.volume = 0.5; music.play();
+        document.getElementById('title-screen').style.display = 'none';
         renderScene();
+        gameLoop();
+    }
+
+    function gameLoop() {
+        updateMovement();
+        checkProximity();
+        requestAnimationFrame(gameLoop);
+    }
+
+    let frameCount = 0;
+    function updateMovement() {
+        let dx = 0, dy = 0;
+        if (state.keys["KeyW"]) dy -= 4;
+        if (state.keys["KeyS"]) dy += 4;
+        if (state.keys["KeyA"]) dx -= 4;
+        if (state.keys["KeyD"]) dx += 4;
+
+        if (dx !== 0 || dy !== 0) {
+            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
+            state.winterY = Math.max(300, Math.min(680, state.winterY + dy)); // Room bounds
+            
+            frameCount++;
+            const isAway = dy < 0 && Math.abs(dy) > Math.abs(dx);
+            const currentSet = isAway ? sprites.away : sprites.side;
+            const winter = document.getElementById('winter');
+            
+            winter.src = (Math.floor(frameCount / 10) % 2 === 0) ? currentSet.frame1 : currentSet.frame2;
+            if (dx !== 0) winter.style.transform = `scale(${0.75 + (0.25 * (state.winterY / 720))}) scaleX(${dx < 0 ? -1 : 1})`;
+            else winter.style.transform = `scale(${0.75 + (0.25 * (state.winterY / 720))})`;
+        }
+        updateWinterVisuals();
     }
 
     function updateWinterVisuals() {
         const winter = document.getElementById('winter');
         const currentScale = 0.75 + (0.25 * (state.winterY / 720));
         winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
-        winter.style.top = (state.winterY - (160 * currentScale)) + 'px'; 
-        winter.style.transform = `scale(${currentScale})`;
+        winter.style.top = (state.winterY - (160 * currentScale)) + 'px';
     }
 
-    function moveWinter(targetX, targetY, callback) {
-        if (state.isWalking || !state.started) return;
-        state.isWalking = true;
-        const winter = document.getElementById('winter');
-        const speed = 5;
-        let frameCount = 0;
+    function checkProximity() {
+        const prompt = document.getElementById('interact-prompt');
+        let found = null;
 
-        const step = () => {
-            const dx = targetX - state.winterX;
-            const dy = targetY - state.winterY;
-            const distance = Math.sqrt(dx*dx + dy*dy);
+        hotspots.forEach(hs => {
+            // Torch/Items only interactable if not picked up
+            if (state.inventory.includes(hs.id)) return;
+            // Exit only "visible" prompt if torch is found
+            if (hs.id === "Exit" && !state.readBook) return;
 
-            if (distance < speed) {
-                state.winterX = targetX; state.winterY = targetY;
-                state.isWalking = false;
-                winter.src = (dy < -2 && Math.abs(dy) > Math.abs(dx)) ? sprites.away.frame1 : sprites.side.frame1;
-                updateWinterVisuals();
-                if (callback) callback();
-                return;
-            }
+            const dist = Math.sqrt(Math.pow(state.winterX - (hs.x + hs.w/2), 2) + Math.pow(state.winterY - (hs.y + hs.h), 2));
+            if (dist < 80) found = hs;
+        });
 
-            const isAway = dy < -1 && Math.abs(dy) > Math.abs(dx);
-            const currentSet = isAway ? sprites.away : sprites.side;
-            const flip = dx < 0 ? "scaleX(-1)" : "scaleX(1)";
-            
-            state.winterX += (dx / distance) * speed;
-            state.winterY += (dy / distance) * speed;
-
-            frameCount++;
-            winter.src = (Math.floor(frameCount / 10) % 2 === 0) ? currentSet.frame1 : currentSet.frame2;
-            
-            const currentScale = 0.75 + (0.25 * (state.winterY / 720));
-            winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
-            winter.style.top = (state.winterY - (160 * currentScale)) + 'px'; 
-            winter.style.transform = `${flip} scale(${currentScale})`;
-
-            requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
+        if (found) {
+            state.interactable = found;
+            prompt.style.display = 'block';
+            prompt.style.left = state.winterX + 'px';
+            prompt.style.top = (state.winterY - 180) + 'px';
+        } else {
+            state.interactable = null;
+            prompt.style.display = 'none';
+        }
     }
 
     function investigateItem() {
-        if (!state.activeItem) {
-            say("I need to investigate the clues.", true);
-            return;
-        }
-
         if (state.activeItem === "Books") {
             state.readBook = true;
             say("Hmm, a book on King Arthur? This looks interesting! 'Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.'", false);
-        } else if (state.activeItem === "Torch") {
-            say("A standard torch. It's the only reason I can see right now.", true);
-        } else {
-            say("Not much to see here, I need to look at other clues.", true);
-        }
+            setTimeout(() => say("As tempting as it would be to find a missing relic, I just need to get out of here and find out where 'here' actually is, and why I'm here!", true), 100);
+        } else if (!state.activeItem) say("I need to investigate the clues.", true);
+        else say("Nothing much here.", true);
     }
-
-    function setObjPos(id, rawX, rawY, w) {
-        const el = document.getElementById(id);
-        if(!el) return;
-        el.style.left = (rawX * SCALE_X) + "px";
-        el.style.top = (rawY * SCALE_Y) + "px";
-        el.style.width = w + "px";
-    }
-
-    const scenes = {
-        1: {
-            setup: () => {
-                // Torch logic remains same
-                setObjPos("obj-Torch", 608, 407, 60);
-                createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
-                    if (state.isDark) {
-                        pickup("Torch", "ItemTorch.png", "A torch! This should help.");
-                        state.isDark = false; 
-                        renderScene();
-                    }
-                });
-
-                setObjPos("obj-Books", 951, 310, 75);
-                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Found some old books."));
-
-                setObjPos("obj-Vase", 779, 302, 50);
-                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "Just an old vase."));
-
-                setObjPos("obj-Card", 436, 180, 30);
-                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card?"));
-
-                // Exit logic: Using a function call within the hotspot to ensure 'readBook' is checked when CLICKED
-                createHotspot(1130 * SCALE_X, 402 * SCALE_Y, 120, 250, "Exit", () => {
-                    if (state.isDark) {
-                        say("I'm not wandering into that hallway in the dark.", true);
-                    } else if (state.readBook === false) {
-                        say("I feel like I'm missing something important in this room.", true);
-                    } else {
-                        say("Avalon... that's where I need to go.", true);
-                        // Progress code would go here!
-                    }
-                });
-            }
-        }
-    };
-
-    function createHotspot(x, y, w, h, name, action) {
-        const hs = document.createElement('div');
-        hs.className = 'hotspot';
-        hs.style.left = x + 'px'; hs.style.top = y + 'px';
-        hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = (e) => { 
-            e.stopPropagation(); 
-            moveWinter(x + (w/2), y + h, action); 
-        };
-        document.getElementById('click-layer').appendChild(hs);
-    }
-
-    document.getElementById('click-layer').onclick = (e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        moveWinter(e.clientX - rect.left, e.clientY - rect.top);
-    };
 
     function pickup(name, img, msg) {
-        if (state.inventory.includes(name)) return;
         state.inventory.push(name);
         const obj = document.getElementById('obj-' + name);
         if (obj) obj.style.display = 'none';
         const slot = document.getElementById('s' + (state.inventory.length - 1));
-        if (slot) slot.innerHTML = `<img src="${img}">`;
+        slot.innerHTML = `<img src="${img}">`;
         say(msg, true);
     }
 
@@ -296,38 +242,25 @@
         document.getElementById('s' + idx).classList.add('active-slot');
     }
 
-    let dialogueTimeout;
-    function say(msg, autoHide = true) {
+    function say(msg, autoHide) {
         const d = document.getElementById('dialogue');
-        d.innerText = msg;
-        d.style.display = 'block';
-        clearTimeout(dialogueTimeout);
-        if (autoHide) {
-            dialogueTimeout = setTimeout(() => { 
-                if(d.innerText === msg) d.style.display = 'none'; 
-            }, 5000);
-        }
+        d.innerText = msg; d.style.display = 'block';
+        if (autoHide) setTimeout(() => d.style.display = 'none', 5000);
     }
 
     function renderScene() {
-        if (!state.started) return;
-        document.getElementById('click-layer').innerHTML = "";
-        const bg = document.getElementById('bg');
-        bg.style.filter = state.isDark ? "brightness(0.08)" : "none";
-        
-        const music = document.getElementById('bg-music');
-        if (state.room === 1 && !music.paused === false) music.play().catch(e => {});
-
-        const torchEl = document.getElementById('obj-Torch');
-        if (torchEl) torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
-
-        ["Books", "Vase", "Card"].forEach(name => {
+        document.getElementById('bg').style.filter = state.isDark ? "brightness(0.08)" : "none";
+        ["Torch", "Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
-            if (el) el.style.display = (!state.isDark && !state.inventory.includes(name)) ? 'block' : 'none';
+            if (el) {
+                const hs = hotspots.find(h => h.id === name);
+                el.style.left = hs.x + "px"; el.style.top = hs.y + "px"; el.style.width = hs.w + "px";
+                el.style.display = (!state.isDark || name === "Torch") && !state.inventory.includes(name) ? 'block' : 'none';
+            }
         });
-
-        scenes[state.room].setup();
     }
+
+    updateWinterVisuals();
 </script>
 </body>
 </html>
