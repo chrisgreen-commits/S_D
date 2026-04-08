@@ -18,11 +18,11 @@
 
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        /* Winter base size is 75% of original (124px). z-index 5 keeps her behind dialogue but in front of BG */
         #winter { 
             position: absolute; 
             width: 124px; 
             z-index: 5; 
+            /* Anchor point at the feet (bottom center) */
             transform-origin: bottom center;
             pointer-events: none;
         }
@@ -33,7 +33,6 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; cursor: pointer;
         }
-        /* Title Scaling: Subtitle is 30px, Main Title is 125% of that (37.5px) */
         #title-screen .sub-title { font-size: 30px; letter-spacing: 5px; color: #be9b7b; margin: 0; }
         #title-screen .main-title { font-size: 37.5px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
         #title-screen .author { font-size: 20px; letter-spacing: 3px; color: #8a735d; margin-bottom: 40px; }
@@ -98,15 +97,15 @@
     const state = {
         room: 1, inventory: [], activeItem: null,
         isDark: true, 
-        winterX: 150, 
-        winterY: 500, // Starting Y position
+        // Starting Winter at the far left hotspot area
+        winterX: 50, 
+        winterY: 450, 
         isWalking: false, started: false
     };
 
-    // Asset Map
     const sprites = {
         side: { idle: "WinterIdle.png", walk: "WinterWalk1.png" },
-        away: { idle: "WinterIdleAway.png", walk: "WinterWalkAway1.png" }
+        away: { idle: "WinterWalkAway1.png", walk: "WinterWalkAway2.png" }
     };
 
     function startGame() {
@@ -115,7 +114,7 @@
         document.getElementById('title-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('title-screen').style.display = 'none';
-            say("Where am I? It's freezing...");
+            say("It's so dark... I need to find a light.");
         }, 1000);
         updateWinterVisuals();
         renderScene();
@@ -123,10 +122,10 @@
 
     function updateWinterVisuals() {
         const winter = document.getElementById('winter');
-        // Perspective Math: At y=0, scale is 0.75. At y=720, scale is 1.0.
         const currentScale = 0.75 + (0.25 * (state.winterY / 720));
-        winter.style.left = state.winterX + 'px';
-        winter.style.top = state.winterY + 'px';
+        // Offset so X/Y refers to the bottom-center of her feet
+        winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
+        winter.style.top = (state.winterY - (160 * currentScale)) + 'px'; 
         winter.style.transform = `scale(${currentScale})`;
     }
 
@@ -135,7 +134,7 @@
         state.isWalking = true;
         const winter = document.getElementById('winter');
         
-        const speed = 4;
+        const speed = 4.5;
         let frameCount = 0;
 
         const step = () => {
@@ -147,30 +146,26 @@
                 state.winterX = targetX;
                 state.winterY = targetY;
                 state.isWalking = false;
-                winter.src = Math.abs(dy) > Math.abs(dx) && dy < 0 ? sprites.away.idle : sprites.side.idle;
+                // Face "Away" idle if moving up, otherwise "Side" idle
+                winter.src = (dy < -2 && Math.abs(dy) > Math.abs(dx)) ? sprites.away.idle : sprites.side.idle;
                 updateWinterVisuals();
                 if (callback) callback();
                 return;
             }
 
-            // Decide which animation set to use
-            const movingAway = Math.abs(dy) > Math.abs(dx) && dy < 0;
+            const movingAway = dy < -1 && Math.abs(dy) > Math.abs(dx);
             const currentSet = movingAway ? sprites.away : sprites.side;
-            
-            // Flip if moving left
             const flip = dx < 0 ? "scaleX(-1)" : "scaleX(1)";
             
             state.winterX += (dx / distance) * speed;
             state.winterY += (dy / distance) * speed;
 
-            // Simple frame toggle
             frameCount++;
-            winter.src = (Math.floor(frameCount / 15) % 2 === 0) ? currentSet.walk : currentSet.idle;
+            winter.src = (Math.floor(frameCount / 12) % 2 === 0) ? currentSet.walk : currentSet.idle;
             
-            // Apply scale + flip
             const currentScale = 0.75 + (0.25 * (state.winterY / 720));
-            winter.style.left = state.winterX + 'px';
-            winter.style.top = state.winterY + 'px';
+            winter.style.left = (state.winterX - (62 * currentScale)) + 'px';
+            winter.style.top = (state.winterY - (160 * currentScale)) + 'px'; 
             winter.style.transform = `${flip} scale(${currentScale})`;
 
             requestAnimationFrame(step);
@@ -191,31 +186,26 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Torch
                 setObjPos("obj-Torch", 608, 407, 60);
                 createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
                     if (state.isDark) {
-                        pickup("Torch", "ItemTorch.png", "The torch is lit!");
+                        pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
                         state.isDark = false; 
                         renderScene();
                     }
                 });
 
-                // Books
                 setObjPos("obj-Books", 951, 310, 75);
-                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon..."));
+                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting."));
 
-                // Vase
                 setObjPos("obj-Vase", 779, 302, 50);
-                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
+                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "An old ceramic vase."));
 
-                // Card
                 setObjPos("obj-Card", 436, 180, 30);
-                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card."));
+                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock."));
 
-                // Exit
                 createHotspot(1253 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("Too dark...");
+                    if (state.isDark) say("I'm not going anywhere in the dark.");
                     else say("I should look around more.");
                 });
             }
@@ -227,18 +217,19 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        // When clicking a hotspot, move Winter to that specific coordinate
         hs.onclick = (e) => {
             e.stopPropagation();
-            moveWinter(x, y, action);
+            // Move to bottom of hotspot
+            moveWinter(x + (w/2), y + h, action);
         };
         document.getElementById('click-layer').appendChild(hs);
     }
 
-    // Generic floor click for movement
     document.getElementById('click-layer').onclick = (e) => {
-        const rect = e.target.getBoundingClientRect();
-        moveWinter(e.clientX - rect.left - 60, e.clientY - rect.top - 100);
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        moveWinter(clickX, clickY);
     };
 
     function pickup(name, img, msg) {
