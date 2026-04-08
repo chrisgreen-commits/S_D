@@ -4,33 +4,52 @@
     <meta charset="UTF-8">
     <title>Shadows & Daylight: Excalibur's Labyrinth</title>
     <style>
-        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
-        #game-container { position: relative; width: 800px; height: 600px; margin: 20px auto; border: 4px solid #be9b7b; background: #000; }
-        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
-        #winter { position: absolute; bottom: 80px; width: 110px; z-index: 5; transition: left linear; }
-        #npc { position: absolute; bottom: 80px; right: 100px; width: 120px; display: none; z-index: 4; }
+        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: auto; }
         
-        /* Updated Title Overlay */
+        /* Resized Container: 800x600 -> 1200x900 */
+        #game-container { 
+            position: relative; 
+            width: 1200px; 
+            height: 900px; 
+            margin: 20px auto; 
+            border: 6px solid #be9b7b; 
+            background: #000; 
+            overflow: hidden;
+        }
+
+        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
+        
+        /* Winter and NPC Resized */
+        #winter { position: absolute; bottom: 120px; width: 165px; z-index: 5; transition: left linear; }
+        #npc { position: absolute; bottom: 120px; right: 150px; width: 180px; display: none; z-index: 4; }
+        
+        /* Title Overlay Resized */
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.6); z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; cursor: pointer;
         }
-        #title-screen .sub-title { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 0; }
-        #title-screen .main-title { font-size: 42px; letter-spacing: 6px; color: #fff; text-shadow: 0 0 15px #be9b7b; margin: 10px 0; }
-        #title-screen .author { font-size: 16px; letter-spacing: 2px; color: #8a735d; margin-bottom: 40px; }
-        #title-screen p { font-size: 14px; letter-spacing: 2px; color: #be9b7b; animation: blink 2s infinite; }
+        #title-screen .sub-title { font-size: 30px; letter-spacing: 5px; color: #be9b7b; margin: 0; }
+        #title-screen .main-title { font-size: 63px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
+        #title-screen .author { font-size: 24px; letter-spacing: 3px; color: #8a735d; margin-bottom: 60px; }
+        #title-screen p { font-size: 21px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
         .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
-        #inventory { position: absolute; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); border-top: 2px solid #be9b7b; display: flex; align-items: center; padding: 0 20px; z-index: 10; }
-        .slot { width: 50px; height: 50px; border: 1px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .slot img { width: 40px; height: 40px; }
-        .active-slot { border-color: #fff; box-shadow: 0 0 8px #fff; }
-        #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; line-height: 1.4; }
+        
+        /* Inventory Resized */
+        #inventory { position: absolute; bottom: 0; width: 100%; height: 112px; background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; display: flex; align-items: center; padding: 0 30px; z-index: 10; }
+        .slot { width: 75px; height: 75px; border: 2px solid #444; margin-right: 15px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .slot img { width: 60px; height: 60px; }
+        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
+        
+        /* Dialogue Box Resized */
+        #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 24px; }
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
+        
+        #active-txt-label { margin-left: auto; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -45,17 +64,17 @@
 
     <img id="bg" src="Room1_Library.png">
     
-    <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 400px; top: 410px; width: 35px;">
-    <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 600px; top: 460px; width: 25px;">
-    <img id="obj-Books" src="ItemBooks.png" class="world-obj" style="left: 550px; top: 250px; width: 45px;">
+    <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 600px; top: 615px; width: 52px;">
+    <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 900px; top: 690px; width: 38px;">
+    <img id="obj-Books" src="ItemBooks.png" class="world-obj" style="left: 825px; top: 375px; width: 67px;">
     
-    <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 300px; top: 320px; width: 25px;">
-    <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 500px; top: 320px; width: 35px;">
+    <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 450px; top: 480px; width: 38px;">
+    <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 750px; top: 480px; width: 52px;">
     
-    <img id="obj-Cue" src="ItemCue.png" class="world-obj" style="left: 120px; top: 350px; width: 80px;">
-    <img id="obj-Balls" src="ItemBalls.png" class="world-obj" style="left: 150px; top: 380px; width: 30px;">
+    <img id="obj-Cue" src="ItemCue.png" class="world-obj" style="left: 180px; top: 525px; width: 120px;">
+    <img id="obj-Balls" src="ItemBalls.png" class="world-obj" style="left: 225px; top: 570px; width: 45px;">
     
-    <img id="winter" src="WinterIdle.png" style="left: 100px;">
+    <img id="winter" src="WinterIdle.png" style="left: 150px;">
     <img id="npc" src="KidnapperTalk.png">
     
     <div id="dialogue"></div>
@@ -66,7 +85,7 @@
         <div class="slot" id="s3" onclick="selectItem(3)"></div>
         <div class="slot" id="s4" onclick="selectItem(4)"></div>
         <div class="slot" id="s5" onclick="selectItem(5)"></div>
-        <div style="margin-left: auto;">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
     <div id="click-layer"></div>
 </div>
@@ -74,7 +93,7 @@
 <script>
     const state = {
         room: 1, inventory: [], activeItem: null,
-        isDark: true, winterPos: 100, isWalking: false,
+        isDark: true, winterPos: 150, isWalking: false,
         cutscene: false, started: false
     };
 
@@ -103,7 +122,8 @@
             frame++;
         }, 220);
 
-        const duration = Math.abs(targetX - state.winterPos) * 5;
+        // Adjusted timing for larger distance
+        const duration = Math.abs(targetX - state.winterPos) * 3.5; 
         winter.style.transitionDuration = `${duration}ms`;
         winter.style.left = targetX + 'px';
 
@@ -120,32 +140,32 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                createHotspot(380, 200, 60, 100, "Torch", () => {
+                createHotspot(570, 300, 90, 150, "Torch", () => {
                     pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
                     state.isDark = false; renderScene();
                 });
-                createHotspot(400, 400, 60, 60, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
-                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card. This might be useful for a lock."));
-                createHotspot(550, 250, 60, 60, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting, but I have bigger problems."));
-                createHotspot(750, 50, 50, 500, "Exit", () => {
+                createHotspot(600, 600, 90, 90, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
+                createHotspot(900, 675, 90, 90, "Card", () => pickup("Card", "ItemCard.png", "A playing card. This might be useful for a lock."));
+                createHotspot(825, 375, 90, 90, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting, but I have bigger problems."));
+                createHotspot(1125, 75, 75, 750, "Exit", () => {
                     if (state.isDark) say("I need a light first.");
-                    else changeRoom(2, 50); 
+                    else changeRoom(2, 75); 
                 });
             }
         },
         2: {
             bg: "Room2_Hallway.png",
             setup: () => {
-                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(1, 700));
-                createHotspot(300, 320, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... what happened to him?"));
-                createHotspot(500, 320, 60, 60, "Notepad", () => {
+                createHotspot(0, 75, 75, 750, "Back", () => changeRoom(1, 1050));
+                createHotspot(450, 480, 75, 75, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... what happened to him?"));
+                createHotspot(750, 480, 90, 90, "Notepad", () => {
                     say("'I've failed. I can't find the sword...' - Detective Smith.");
                     pickup("Notepad", "ItemNotepad.png", "His notepad... might have clues.");
                 });
-                createHotspot(730, 100, 70, 400, "Door", () => {
+                createHotspot(1095, 150, 105, 600, "Door", () => {
                     if (state.activeItem === "Card") {
                         say("I'll shim the latch with the card... Success!");
-                        setTimeout(() => changeRoom(3, 50), 2000);
+                        setTimeout(() => changeRoom(3, 75), 2000);
                     } else say("It's locked tight.");
                 });
             }
@@ -153,13 +173,13 @@
         3: {
             bg: "Room3_Billiards.png",
             setup: () => {
-                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(2, 650));
-                createHotspot(200, 100, 100, 200, "Window", () => say("High in the mountains... looks like Europe."));
-                createHotspot(120, 350, 100, 100, "Pool Table", () => {
+                createHotspot(0, 75, 75, 750, "Back", () => changeRoom(2, 975));
+                createHotspot(300, 150, 150, 300, "Window", () => say("High in the mountains... looks like Europe."));
+                createHotspot(180, 525, 150, 150, "Pool Table", () => {
                     pickup("Cue", "ItemCue.png", "A pool cue... might work as a weapon.");
                     setTimeout(() => pickup("Balls", "ItemBalls.png", "I'll grab these pool balls too."), 1000);
                 });
-                createHotspot(600, 150, 120, 250, "Fireplace", () => {
+                createHotspot(900, 225, 180, 375, "Fireplace", () => {
                     if (state.activeItem === "Vase") triggerSecretPassage();
                     else say("Someone dumped this flower here? Shame. If only I had a vase.");
                 });
@@ -193,7 +213,7 @@
 
         setTimeout(() => {
             state.cutscene = false;
-            moveWinter(850, () => changeRoom(5, 50));
+            moveWinter(1275, () => changeRoom(5, 75));
         }, 11000);
     }
 
@@ -202,7 +222,7 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = () => moveWinter(x > 700 ? x - 80 : x, action);
+        hs.onclick = () => moveWinter(x > 1050 ? x - 120 : x, action);
         document.getElementById('click-layer').appendChild(hs);
     }
 
