@@ -1,47 +1,297 @@
-function updateWinterVisuals() {
-    const winter = document.getElementById('winter');
-    
-    // --- DYNAMIC SCALING LOGIC ---
-    // Top boundary (minY) is 150, Bottom boundary (maxY) is 680.
-    // We want 150y to be 0.5 scale and 680y to be 1.0 scale.
-    const minY = 150;
-    const maxY = 680;
-    
-    // Calculate percentage of vertical progress (0 at top, 1 at bottom)
-    const travelPercent = (state.winterY - minY) / (maxY - minY);
-    
-    // Apply linear interpolation: 0.5 + (0.5 * percentage)
-    const scale = 0.5 + (0.5 * travelPercent);
-    
-    // Update position and scale
-    // We adjust the offset (62 and 160) by the scale so she stays grounded
-    winter.style.left = (state.winterX - (62 * scale)) + 'px';
-    winter.style.top = (state.winterY - (160 * scale)) + 'px';
-    
-    // Apply horizontal flip if walking left, while maintaining the dynamic scale
-    const direction = state.keys["KeyA"] ? -1 : (state.keys["KeyD"] ? 1 : (winter.style.transform.includes("scaleX(-1)") ? -1 : 1));
-    winter.style.transform = `scale(${scale}) scaleX(${direction})`;
-}
-
-function updateMovement() {
-    let dx = 0, dy = 0;
-    if (state.keys["KeyW"]) dy -= 4; 
-    if (state.keys["KeyS"]) dy += 4;
-    if (state.keys["KeyA"]) dx -= 4; 
-    if (state.keys["KeyD"]) dx += 4;
-
-    if (dx !== 0 || dy !== 0) {
-        state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-        state.winterY = Math.max(150, Math.min(680, state.winterY + dy));
-        
-        // Update frame animation
-        frameCount++;
-        const winter = document.getElementById('winter');
-        if (frameCount % 10 === 0) {
-            winter.src = (winter.src.includes("Idle")) ? "WinterWalk1.png" : "WinterIdle.png";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shadows & Daylight: Labyrinth of Excalibur</title>
+    <style>
+        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
+        #game-container { 
+            position: relative; width: 1280px; height: 720px; 
+            margin: 40px auto; border: 6px solid #be9b7b; 
+            background: #000; overflow: hidden; transition: opacity 0.5s;
         }
-    } else {
-        document.getElementById('winter').src = "WinterIdle.png";
+        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
+        #winter { position: absolute; width: 124px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
+        
+        #interact-prompt {
+            position: absolute; background: rgba(255,255,255,0.9); color: #000;
+            padding: 5px 12px; border-radius: 4px; font-weight: bold;
+            font-size: 20px; z-index: 50; display: none; transform: translate(-50%, -100%);
+            pointer-events: none; border: 2px solid #be9b7b;
+        }
+
+        /* Title Screen CSS - Restored and Updated */
+        #title-screen {
+            position: absolute; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; transition: opacity 1s; cursor: pointer;
+        }
+        
+        /* Smaller font size, shared by subtitle and author */
+        .title-small { 
+            font-size: 24px; 
+            letter-spacing: 5px; 
+            color: #be9b7b; 
+            margin: 0;
+            user-select: none;
+        }
+        
+        /* Main Title CSS */
+        #title-screen .main-title { 
+            font-size: 45px; 
+            letter-spacing: 9px; 
+            color: #fff; 
+            text-shadow: 0 0 22px #be9b7b; 
+            margin: 15px 0; 
+            user-select: none;
+        }
+        
+        #title-screen p { font-size: 18px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; user-select: none; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
+        
+        #inventory-bar { 
+            position: absolute; bottom: 0; width: 100%; height: 100px; 
+            background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
+            display: flex; align-items: center; padding: 0 20px; z-index: 10;
+        }
+        #investigate-btn { font-size: 40px; cursor: pointer; margin-left: 20px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
+        #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
+        .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .slot img { width: 50px; height: 50px; }
+        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
+        
+        #dialogue { 
+            position: absolute; top: 30px; width: 84%; left: 8%; 
+            background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
+            padding: 22px; display: none; z-index: 20; color: white; 
+            line-height: 1.4; font-size: 22px; cursor: pointer; 
+        }
+        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; }
+        #active-txt-label { font-size: 16px; color: #be9b7b; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <audio id="bg-music" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
+    <div id="interact-prompt">PRESS E</div>
+    
+    <div id="title-screen" onclick="startGame()">
+        <div class="title-small">SHADOWS & DAYLIGHT</div>
+        
+        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
+        
+        <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
+        
+        <p>CLICK TO BEGIN</p>
+    </div>
+
+    <img id="bg" src="Room1_Library.png">
+    
+    <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
+    <img id="obj-Books" src="ItemBooks.png" class="world-obj">
+    <img id="obj-Vase" src="ItemVase.png" class="world-obj">
+    <img id="obj-Card" src="ItemCard.png" class="world-obj">
+    
+    <img id="winter" src="WinterIdle.png">
+    
+    <div id="dialogue" onclick="advanceDialogue()"></div>
+
+    <div id="inventory-bar">
+        <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div id="slots-container">
+            <div class="slot" id="s0" onclick="selectItem(0)"></div>
+            <div class="slot" id="s1" onclick="selectItem(1)"></div>
+            <div class="slot" id="s2" onclick="selectItem(2)"></div>
+            <div class="slot" id="s3" onclick="selectItem(3)"></div>
+            <div class="slot" id="s4" onclick="selectItem(4)"></div>
+            <div class="slot" id="s5" onclick="selectItem(5)"></div>
+        </div>
+        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
+    </div>
+</div>
+
+<script>
+    const SCALE_X = 1280 / 1376;
+    const SCALE_Y = 720 / 768;
+
+    const state = {
+        room: 1, inventory: [], activeItem: null,
+        isDark: true,
+        dialogueStep: 0, 
+        remarkMade: false,
+        winterX: 150, winterY: 550, started: false, keys: {},
+        interactable: null
+    };
+
+    const bookSequence = [
+        "Hmm, a book about King Arthur.",
+        "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.",
+        "As tempting as it would be to find a missing relic, I'm interested in getting out of here and finding out where I am and how I got there."
+    ];
+
+    const scenes = {
+        1: {
+            bg: "Room1_Library.png",
+            hotspots: [
+                { id: "Torch", x: 608, y: 407, w: 70, h: 100, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
+                { id: "Books", x: 951, y: 310, w: 80, h: 80, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
+                { id: "Vase", x: 779, y: 302, w: 60, h: 80, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
+                { id: "Card", x: 436, y: 180, w: 40, h: 60, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
+                { id: "Exit", x: 1153, y: 412, w: 120, h: 250, action: () => { if(state.remarkMade) changeRoom(2); } }
+            ]
+        },
+        2: { bg: "Room2_Hallway.png", hotspots: [ { id: "Next", x: 1200, y: 400, w: 80, h: 300, action: () => changeRoom(3) } ] },
+        3: { bg: "Room3_Dining.png", hotspots: [ { id: "Next", x: 1200, y: 400, w: 80, h: 300, action: () => changeRoom(5) } ] },
+        5: { bg: "Room5_Study.png", hotspots: [] }
+    };
+
+    window.addEventListener("keydown", e => state.keys[e.code] = true);
+    window.addEventListener("keyup", e => state.keys[e.code] = false);
+    window.addEventListener("keydown", e => { if(e.code === "KeyE" && state.interactable) state.interactable.action(); });
+
+    function startGame() {
+        state.started = true;
+        document.getElementById('bg-music').volume = 0.5;
+        document.getElementById('bg-music').play();
+        document.getElementById('title-screen').style.display = 'none';
+        renderScene();
+        gameLoop();
     }
+
+    function changeRoom(id) {
+        document.getElementById('game-container').style.opacity = "0";
+        setTimeout(() => {
+            state.room = id;
+            state.winterX = 100;
+            renderScene();
+            document.getElementById('game-container').style.opacity = "1";
+        }, 500);
+    }
+
+    function gameLoop() {
+        if(!state.started) return;
+        updateMovement();
+        checkProximity();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function updateMovement() {
+        let dx = 0, dy = 0;
+        if (state.keys["KeyW"]) dy -= 4; if (state.keys["KeyS"]) dy += 4;
+        if (state.keys["KeyA"]) dx -= 4; if (state.keys["KeyD"]) dx += 4;
+        if (dx !== 0 || dy !== 0) {
+            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
+            // Fixed minY bound at 150px
+            state.winterY = Math.max(150, Math.min(680, state.winterY + dy));
+            const winter = document.getElementById('winter');
+            const scale = 0.75 + (0.25 * (state.winterY / 720));
+            winter.style.transform = `scale(${scale}) scaleX(${dx < 0 ? -1 : 1})`;
+        }
+        updateWinterVisuals();
+    }
+
+    function updateWinterVisuals() {
+        const winter = document.getElementById('winter');
+        const minY = 150;
+        const maxY = 680;
+        // Perspective Math: Range is 0.5 to 1.0 (50% shrink at farthest point)
+        const travelPercent = (state.winterY - minY) / (maxY - minY);
+        const scale = 0.5 + (0.5 * travelPercent);
+        winter.style.left = (state.winterX - (62 * scale)) + 'px';
+        winter.style.top = (state.winterY - (160 * scale)) + 'px';
+    }
+
+    function checkProximity() {
+        const prompt = document.getElementById('interact-prompt');
+        let found = null;
+        scenes[state.room].hotspots.forEach(hs => {
+            if (hs.id !== "Exit" && hs.id !== "Next" && state.inventory.includes(hs.id)) return;
+            if (hs.id === "Exit" && !state.remarkMade) return;
+            const dist = Math.sqrt(Math.pow(state.winterX - (hs.x*SCALE_X), 2) + Math.pow(state.winterY - (hs.y*SCALE_Y), 2));
+            if (dist < 100) found = hs;
+        });
+        if (found) {
+            state.interactable = found;
+            prompt.style.display = 'block';
+            prompt.style.left = state.winterX + 'px';
+            prompt.style.top = (state.winterY - 180) + 'px';
+        } else {
+            prompt.style.display = 'none';
+            state.interactable = null;
+        }
+    }
+
+    function investigateItem() {
+        if (state.activeItem === "Books") {
+            state.dialogueStep = 0;
+            advanceDialogue(); 
+        } else if (state.activeItem) {
+            say("Nothing remarkable about this.", true);
+        } else {
+            say("I need to equip a clue first.", true);
+        }
+    }
+
+    function advanceDialogue() {
+        const d = document.getElementById('dialogue');
+        if (state.activeItem === "Books") {
+            if (state.dialogueStep < bookSequence.length) {
+                say(bookSequence[state.dialogueStep], false);
+                state.dialogueStep++;
+            } else {
+                state.remarkMade = true;
+                d.style.display = 'none';
+            }
+        } else {
+            d.style.display = 'none';
+        }
+    }
+
+    function pickup(name, img, msg) {
+        state.inventory.push(name);
+        document.getElementById('obj-'+name).style.display = 'none';
+        document.getElementById('s'+(state.inventory.length-1)).innerHTML = `<img src="${img}">`;
+        say(msg, true);
+    }
+
+    function selectItem(idx) {
+        if (!state.inventory[idx]) return;
+        state.activeItem = state.inventory[idx];
+        document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
+        document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
+        document.getElementById('s' + idx).classList.add('active-slot');
+    }
+
+    function say(msg, autoHide) {
+        const d = document.getElementById('dialogue');
+        d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
+        d.style.display = 'block';
+        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
+    }
+
+    function renderScene() {
+        const s = scenes[state.room];
+        document.getElementById('bg').src = s.bg;
+        document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+        ["Torch", "Books", "Vase", "Card"].forEach(name => {
+            const el = document.getElementById('obj-' + name);
+            if (el) {
+                if (state.room === 1) {
+                    const hs = s.hotspots.find(h => h.id === name);
+                    el.style.left = (hs.x*SCALE_X) + "px"; el.style.top = (hs.y*SCALE_Y) + "px"; el.style.width = (hs.w) + "px";
+                    el.style.display = (!state.isDark || name === "Torch") && !state.inventory.includes(name) ? 'block' : 'none';
+                } else {
+                    el.style.display = 'none';
+                }
+            }
+        });
+    }
+
     updateWinterVisuals();
-}
+</script>
+</body>
+</html>
