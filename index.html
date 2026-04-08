@@ -12,7 +12,7 @@
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #winter.small { width: 46px; } /* 50% size for Rooftop */
+        #winter.small { width: 46px; }
         
         #kidnapper { position: absolute; width: 100px; z-index: 4; image-rendering: pixelated; display: none; }
 
@@ -126,11 +126,17 @@
         kidnapperTalking: false
     };
 
+    const dialogueSequences = {
+        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon...", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
+        "Phone": ["I wonder who this belongs to? Early 2000s.", "The contact page says, Detective Ambrose Smith."],
+        "Notepad": ["A notepad?", "There's a note here, 'I've failed. I can't find the sword...' - Detective Smith.'"]
+    };
+
     const finalSequence = [
-        { speaker: "Kidnapper", text: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills. I've tried world renowned detective after detective, but no one had succeeded until now. I want you to help them find the real Excalibur in the real Avalon, not this fake labyrinth. Are you up to the challenge?" },
-        { speaker: "Winter", text: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." },
-        { speaker: "Kidnapper", text: "So you *are* saying yes then?" },
-        { speaker: "Winter", text: "Maybe..." }
+        { s: "Kidnapper", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills. I've tried world renowned detective after detective, but no one had succeeded until now. I want you to help them find the real Excalibur in the real Avalon, not this fake labyrinth. Are you up to the challenge?" },
+        { s: "Winter", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." },
+        { s: "Kidnapper", t: "So you *are* saying yes then?" },
+        { s: "Winter", t: "Maybe..." }
     ];
 
     const scenes = {
@@ -138,28 +144,34 @@
             { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
             { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
+            { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
             { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
+            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 803 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
+            { id: "Phone", x: 369 * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
             { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => changeRoom(3) } 
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
+            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Found some billiard balls.") },
+            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
+            { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 400, hotspots: [
-            { id: "Kidnapper", x: 1000, y: 550, action: () => { state.cutsceneStep = 100; advanceDialogue(); } }
+            { id: "Kidnapper", x: 1000, y: 550, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
     function handleFlower() {
-        if (state.vasePlaced) { changeRoom(5); } 
+        if (state.vasePlaced) changeRoom(5); 
         else if (state.activeItem === "Vase") {
             state.cutsceneStep = 1;
             document.getElementById('bg').src = "Room3_Billiards2.png";
             say("Much better!", false);
-        } else { say("Someone dumped this flower here? Odd.", true); }
+        } else say("Someone dumped this flower here? Odd.", true);
     }
 
     function advanceDialogue() {
@@ -170,8 +182,8 @@
             const idx = state.cutsceneStep - 100;
             if (idx < finalSequence.length) {
                 const line = finalSequence[idx];
-                state.kidnapperTalking = (line.speaker === "Kidnapper");
-                say(line.text, false);
+                state.kidnapperTalking = (line.s === "Kidnapper");
+                say(line.t, false);
                 state.cutsceneStep++;
             } else {
                 state.kidnapperTalking = false;
@@ -187,10 +199,19 @@
             state.vasePlaced = true;
             document.getElementById('bg').src = "Room3_Billiards3.png";
             d.style.display = 'none';
+        } else {
+            // Restore investigate logic
+            const seq = dialogueSequences[state.activeItem];
+            if (seq && state.dialogueStep < seq.length) {
+                say(seq[state.dialogueStep], false);
+                state.dialogueStep++;
+            } else {
+                if (state.activeItem === "Books") state.remarkMade = true;
+                d.style.display = 'none';
+            }
         }
     }
 
-    // Kidnapper animation loop
     setInterval(() => {
         if (state.kidnapperTalking) {
             const kn = document.getElementById('kidnapper');
@@ -238,9 +259,6 @@
             if (id === 5) winter.classList.add('small');
             else winter.classList.remove('small');
             
-            winter.style.left = (state.winterX - 46) + 'px'; 
-            winter.style.top = (state.winterY - (id === 5 ? 60 : 120)) + 'px';
-
             renderScene();
             document.getElementById('game-container').style.opacity = "1";
         }, 500);
@@ -273,7 +291,7 @@
         const prompt = document.getElementById('interact-prompt');
         let found = null;
         scenes[state.room].hotspots.forEach(hs => {
-            if (["Exit", "Next", "Back", "Flower"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
+            if (["Exit", "Next", "Back", "Flower", "Kidnapper"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
             const dx = Math.abs(state.winterX - hs.x);
             const dy = Math.abs(state.winterY - hs.y);
             if (dx < 100 && dy < 300) found = hs;
@@ -283,6 +301,11 @@
             prompt.style.left = state.winterX + 'px';
             prompt.style.top = (state.winterY - (state.room === 5 ? 80 : 180)) + 'px';
         } else { prompt.style.display = 'none'; state.interactable = null; }
+    }
+
+    function investigateItem() {
+        if (dialogueSequences[state.activeItem]) { state.dialogueStep = 0; advanceDialogue(); }
+        else if (state.activeItem) say("Nothing remarkable about this.", true);
     }
 
     function pickup(name, img, msg) {
@@ -317,7 +340,7 @@
         if (state.room === 5) {
             kn.style.display = 'block';
             kn.style.left = '1000px'; kn.style.top = '480px';
-        } else { kn.style.display = 'none'; }
+        } else kn.style.display = 'none';
 
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name);
@@ -325,6 +348,10 @@
             const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
             if (hs && !state.inventory.includes(name)) {
                 el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
+                if (name === "Phone" || name === "Notepad") el.style.width = "35px";
+                else if (name === "Mug") el.style.width = "17px"; 
+                else if (name === "Balls") el.style.width = "34px"; 
+                else el.style.width = "70px";
                 el.style.display = (state.room === 1 && state.isDark && name !== "Torch") ? 'none' : 'block';
             } else el.style.display = 'none';
         });
