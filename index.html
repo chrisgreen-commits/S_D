@@ -12,7 +12,7 @@
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        /* Winter shrunk to 75% (124 * 0.75 = 93) */
+        /* Winter at 75% size */
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         
         #interact-prompt {
@@ -173,7 +173,7 @@
     function startGame() {
         state.started = true;
         document.getElementById('title-screen').style.display = 'none';
-        changeRoom(1, true); // True flag for initial start
+        changeRoom(1, true); 
         gameLoop();
     }
 
@@ -201,7 +201,7 @@
                 state.winterY = 550; 
             }
             else if (id === 3) { 
-                state.winterX = 80; // Enter from far left
+                state.winterX = 80; 
                 state.winterY = 550; 
             }
             
@@ -223,11 +223,11 @@
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            // Invisible Wall at 80% of screen height (720 * 0.2 = 144px is the wall limit)
-            state.winterY = Math.max(144, Math.min(680, state.winterY + dy));
+            // Invisible Wall restored to 60% height (720 * 0.6 = 432 limit)
+            state.winterY = Math.max(432, Math.min(680, state.winterY + dy));
             const winter = document.getElementById('winter');
-            winter.style.left = (state.winterX - 46) + 'px'; // Center 93px width
-            winter.style.top = (state.winterY - 120) + 'px'; // Adjusted for shorter height
+            winter.style.left = (state.winterX - 46) + 'px'; 
+            winter.style.top = (state.winterY - 120) + 'px'; 
             if (dx !== 0) winter.style.transform = `scaleX(${dx < 0 ? -1 : 1})`;
         }
     }
@@ -241,6 +241,7 @@
             
             const dx = Math.abs(state.winterX - hs.x);
             const dy = Math.abs(state.winterY - hs.y);
+            // High dy tolerance (250) allows interaction with items "above" the walk limit
             if (dx < 80 && dy < 250) found = hs;
         });
         if (found) {
@@ -304,7 +305,6 @@
             if (hs && !state.inventory.includes(name)) {
                 el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
                 
-                // Room 2 specialized shrinking for Phone/Notepad (35px instead of 70px)
                 if (state.room === 2 && (name === "Phone" || name === "Notepad")) {
                     el.style.width = "35px";
                 } else {
