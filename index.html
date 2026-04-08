@@ -12,12 +12,14 @@
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         #winter { position: absolute; width: 124px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
+        
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
             padding: 5px 12px; border-radius: 4px; font-weight: bold;
             font-size: 20px; z-index: 50; display: none; transform: translate(-50%, -100%);
             pointer-events: none; border: 2px solid #be9b7b;
         }
+
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.8); z-index: 100;
@@ -27,7 +29,9 @@
         #title-screen .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
         #title-screen p { font-size: 18px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
+        
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
@@ -38,7 +42,13 @@
         .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .slot img { width: 50px; height: 50px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
-        #dialogue { position: absolute; top: 30px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; padding: 22px; display: none; z-index: 20; color: white; line-height: 1.4; font-size: 22px; cursor: pointer; }
+        
+        #dialogue { 
+            position: absolute; top: 30px; width: 84%; left: 8%; 
+            background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
+            padding: 22px; display: none; z-index: 20; color: white; 
+            line-height: 1.4; font-size: 22px; cursor: pointer; 
+        }
         #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; }
         #active-txt-label { font-size: 16px; color: #be9b7b; margin-right: 15px; }
     </style>
@@ -48,17 +58,23 @@
 <div id="game-container">
     <audio id="bg-music" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
     <div id="interact-prompt">PRESS E</div>
+    
     <div id="title-screen" onclick="startGame()">
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <p>CLICK TO BEGIN</p>
     </div>
+
     <img id="bg" src="Room1_Library.png">
+    
     <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
     <img id="obj-Books" src="ItemBooks.png" class="world-obj">
     <img id="obj-Vase" src="ItemVase.png" class="world-obj">
     <img id="obj-Card" src="ItemCard.png" class="world-obj">
+    
     <img id="winter" src="WinterIdle.png">
-    <div id="dialogue" onclick="closeDialogue()"></div>
+    
+    <div id="dialogue" onclick="advanceDialogue()"></div>
+
     <div id="inventory-bar">
         <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
         <div id="slots-container">
@@ -79,17 +95,25 @@
 
     const state = {
         room: 1, inventory: [], activeItem: null,
-        isDark: true, readBook: false, remarkMade: false,
+        isDark: true,
+        dialogueStep: 0, 
+        remarkMade: false,
         winterX: 150, winterY: 550, started: false, keys: {},
         interactable: null
     };
+
+    const bookSequence = [
+        "Hmm, a book about King Arthur.",
+        "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.",
+        "As tempting as it would be to find a missing relic, I'm interested in getting out of here and finding out where I am and how I got there."
+    ];
 
     const scenes = {
         1: {
             bg: "Room1_Library.png",
             hotspots: [
                 { id: "Torch", x: 608, y: 407, w: 70, h: 100, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
-                { id: "Books", x: 951, y: 310, w: 80, h: 80, action: () => pickup("Books", "ItemBooks.png", "Some old books.") },
+                { id: "Books", x: 951, y: 310, w: 80, h: 80, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
                 { id: "Vase", x: 779, y: 302, w: 60, h: 80, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
                 { id: "Card", x: 436, y: 180, w: 40, h: 60, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
                 { id: "Exit", x: 1153, y: 412, w: 120, h: 250, action: () => { if(state.remarkMade) changeRoom(2); } }
@@ -173,16 +197,28 @@
 
     function investigateItem() {
         if (state.activeItem === "Books") {
-            state.readBook = true;
-            say("Hmm, a book on King Arthur? 'Excalibur is hidden in Avalon...' ", false);
-        } else say("Nothing here.", true);
+            state.dialogueStep = 0;
+            advanceDialogue(); 
+        } else if (state.activeItem) {
+            say("Nothing remarkable about this.", true);
+        } else {
+            say("I need to equip a clue first.", true);
+        }
     }
 
-    function closeDialogue() {
-        if (state.readBook && !state.remarkMade) {
-            state.remarkMade = true;
-            say("As tempting as it would be to find a missing relic, I just need to get out of here!", true);
-        } else document.getElementById('dialogue').style.display = 'none';
+    function advanceDialogue() {
+        const d = document.getElementById('dialogue');
+        if (state.activeItem === "Books") {
+            if (state.dialogueStep < bookSequence.length) {
+                say(bookSequence[state.dialogueStep], false);
+                state.dialogueStep++;
+            } else {
+                state.remarkMade = true;
+                d.style.display = 'none';
+            }
+        } else {
+            d.style.display = 'none';
+        }
     }
 
     function pickup(name, img, msg) {
@@ -204,7 +240,7 @@
         const d = document.getElementById('dialogue');
         d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
         d.style.display = 'block';
-        if (autoHide) setTimeout(() => d.style.display = 'none', 4000);
+        if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
     }
 
     function renderScene() {
@@ -213,11 +249,15 @@
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         ["Torch", "Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
-            if (el && state.room === 1) {
-                const hs = s.hotspots.find(h => h.id === name);
-                el.style.left = (hs.x*SCALE_X) + "px"; el.style.top = (hs.y*SCALE_Y) + "px"; el.style.width = (hs.w) + "px";
-                el.style.display = (!state.isDark || name === "Torch") && !state.inventory.includes(name) ? 'block' : 'none';
-            } else if (el) el.style.display = 'none';
+            if (el) {
+                if (state.room === 1) {
+                    const hs = s.hotspots.find(h => h.id === name);
+                    el.style.left = (hs.x*SCALE_X) + "px"; el.style.top = (hs.y*SCALE_Y) + "px"; el.style.width = (hs.w) + "px";
+                    el.style.display = (!state.isDark || name === "Torch") && !state.inventory.includes(name) ? 'block' : 'none';
+                } else {
+                    el.style.display = 'none';
+                }
+            }
         });
     }
 
