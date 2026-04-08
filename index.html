@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>S&D: Excalibur's Labyrinth - Adventure Edition</title>
+    <title>S&D: Excalibur's Labyrinth</title>
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
         #game-container { position: relative; width: 800px; height: 600px; margin: 20px auto; border: 4px solid #be9b7b; background: #000; }
@@ -10,12 +10,15 @@
         #winter { position: absolute; bottom: 80px; width: 110px; z-index: 5; transition: left linear; }
         #npc { position: absolute; bottom: 80px; right: 100px; width: 120px; display: none; z-index: 4; }
         
+        /* Objects visible in the world */
+        .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
+
         #inventory { position: absolute; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); border-top: 2px solid #be9b7b; display: flex; align-items: center; padding: 0 20px; z-index: 10; }
-        .slot { width: 55px; height: 55px; border: 1px solid #444; margin-right: 12px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .slot img { width: 45px; height: 45px; }
+        .slot { width: 50px; height: 50px; border: 1px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .slot img { width: 40px; height: 40px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 8px #fff; }
 
-        #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; line-height: 1.4; }
+        #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; }
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
     </style>
 </head>
@@ -23,8 +26,15 @@
 
 <div id="game-container">
     <img id="bg" src="Room1_Library.png">
+    
+    <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 400px; top: 410px; width: 35px;">
+    <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 600px; top: 460px; width: 25px;">
+    <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 300px; top: 320px; width: 25px;">
+    <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 500px; top: 320px; width: 35px;">
+    
     <img id="winter" src="WinterIdle.png" style="left: 100px;">
     <img id="npc" src="KidnapperTalk.png">
+    
     <div id="dialogue"></div>
     <div id="inventory">
         <div class="slot" id="s0" onclick="selectItem(0)"></div>
@@ -33,7 +43,7 @@
         <div class="slot" id="s3" onclick="selectItem(3)"></div>
         <div class="slot" id="s4" onclick="selectItem(4)"></div>
         <div class="slot" id="s5" onclick="selectItem(5)"></div>
-        <div style="margin-left: auto; font-size: 14px;">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div style="margin-left: auto;">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
     <div id="click-layer"></div>
 </div>
@@ -53,24 +63,18 @@
     function moveWinter(targetX, callback) {
         if (state.isWalking) return;
         state.isWalking = true;
-        
         const winter = document.getElementById('winter');
-        const distance = Math.abs(targetX - state.winterPos);
-        const duration = distance * 5; 
-
-        // MIRROR LOGIC: If moving left, flip the image
-        if (targetX < state.winterPos) {
-            winter.style.transform = "scaleX(-1)";
-        } else {
-            winter.style.transform = "scaleX(1)";
-        }
+        
+        // Mirroring Logic
+        winter.style.transform = targetX < state.winterPos ? "scaleX(-1)" : "scaleX(1)";
 
         let frame = 0;
         const animInterval = setInterval(() => {
             winter.src = (frame % 2 === 0) ? assets.walk : assets.idle;
             frame++;
-        }, 200);
+        }, 220); // Steady walking speed
 
+        const duration = Math.abs(targetX - state.winterPos) * 5;
         winter.style.transitionDuration = `${duration}ms`;
         winter.style.left = targetX + 'px';
 
@@ -88,49 +92,48 @@
             bg: "Room1_Library.png",
             setup: () => {
                 createHotspot(380, 200, 60, 100, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "The torch is lit... this place looks like a dungeon library.");
+                    pickup("Torch", "ItemTorch.png", "Where am I? Why is it so dark? I better find some light.");
                     state.isDark = false;
                     renderScene();
                 });
-                createHotspot(150, 400, 100, 50, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase. It's empty, but maybe I can use it later."));
-                createHotspot(650, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card. I should keep this handy."));
+                createHotspot(400, 400, 60, 60, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase. I'll take it."));
+                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card. This might be useful."));
                 createHotspot(750, 50, 50, 500, "Exit", () => {
-                    if (state.isDark) say("Where am I? Why is it so dark? I better find some light.");
-                    else changeRoom(2);
+                    if (state.isDark) say("I need to find a light source first.");
+                    else changeRoom(2, 50); 
                 });
             }
         },
         2: {
             bg: "Room2_Hallway.png",
             setup: () => {
-                createHotspot(200, 300, 50, 50, "Phone", () => {
-                    pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... I wonder how he got here?");
+                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(1, 700)); // Go back to Room 1
+                createHotspot(300, 300, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... I wonder who this belongs to?"));
+                createHotspot(500, 300, 60, 60, "Notepad", () => {
+                    say("'I've failed. I can't find the sword...' - Detective Smith.");
+                    pickup("Notepad", "ItemNotepad.png", "Smith's notepad... maybe this has clues.");
                 });
-                createHotspot(400, 300, 50, 50, "Notepad", () => {
-                    say("I've failed. I can't find the sword... - Detective Smith.");
-                    pickup("Notepad", "ItemNotepad.png", "This notepad might help solve these mysteries.");
-                });
-                createHotspot(700, 100, 100, 400, "Locked Door", () => {
+                createHotspot(730, 100, 70, 400, "Door", () => {
                     if (state.activeItem === "Card") {
-                        say("Hey, maybe I can use this card to pick the lock... It worked!");
-                        setTimeout(() => changeRoom(3), 2000);
-                    } else say("I'll need a key or something to open this.");
+                        say("Hey, maybe I can use this card pick the lock... It worked!");
+                        setTimeout(() => changeRoom(3, 50), 2000);
+                    } else say("Hmm, that one's locked. I'll need a key or something.");
                 });
             }
         },
         3: {
             bg: "Room3_Billiards.png",
             setup: () => {
-                createHotspot(250, 300, 200, 100, "Pool Table", () => {
-                    say("Maybe I'll keep these pool balls and a cue...");
-                    pickup("Cue", "ItemCue.png", "Added Pool Cue to inventory.");
-                    setTimeout(() => pickup("Balls", "ItemBalls.png", "Added Pool Balls to inventory."), 1000);
+                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(2, 650));
+                createHotspot(250, 300, 150, 100, "Table", () => {
+                    pickup("Cue", "ItemCue.png", "I'll keep this pool cue to defend myself.");
+                    setTimeout(() => pickup("Balls", "ItemBalls.png", "And these pool balls too."), 1000);
                 });
                 createHotspot(420, 150, 80, 150, "Fireplace", () => {
                     if (state.activeItem === "Vase") {
-                        say("If I put the flower in the vase here... look! A secret passageway!");
-                        setTimeout(() => changeRoom(5), 2500);
-                    } else say("Someone dumped this flower here? Odd. If only I had a vase...");
+                        say("If I put the flower in the vase here... the fireplace is moving!");
+                        setTimeout(() => changeRoom(5, 50), 2500);
+                    } else say("Someone dumped this flower here? Shame to let it go to waste.");
                 });
             }
         },
@@ -138,7 +141,7 @@
             bg: "Room5_Rooftop.png",
             setup: () => {
                 document.getElementById('npc').style.display = 'block';
-                say("Kidnapper: 'You've succeeded where world renowned detectives failed.'");
+                say("Kidnapper: 'Impressive, O'Brien. You've navigated the Labyrinth.'");
             }
         }
     };
@@ -148,13 +151,15 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = () => moveWinter(x - 30, action);
+        hs.onclick = () => moveWinter(x > 700 ? x - 80 : x, action);
         document.getElementById('click-layer').appendChild(hs);
     }
 
     function pickup(name, img, msg) {
         if (state.inventory.includes(name)) return;
         state.inventory.push(name);
+        const obj = document.getElementById('obj-' + name);
+        if (obj) obj.style.display = 'none';
         const slot = document.getElementById('s' + (state.inventory.length - 1));
         if (slot) slot.innerHTML = `<img src="${img}">`;
         say(msg);
@@ -172,20 +177,37 @@
         const d = document.getElementById('dialogue');
         d.innerText = msg;
         d.style.display = 'block';
-        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4500);
+        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4000);
     }
 
-    function changeRoom(n) {
+    function changeRoom(n, startX) {
         state.room = n;
+        state.winterPos = startX;
+        document.getElementById('winter').style.left = startX + 'px';
         renderScene();
     }
 
     function renderScene() {
         document.getElementById('click-layer').innerHTML = "";
         document.getElementById('npc').style.display = 'none';
+        document.querySelectorAll('.world-obj').forEach(o => o.style.display = 'none');
+
         const s = scenes[state.room];
-        document.getElementById('bg').src = s.bg;
-        document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+        const bg = document.getElementById('bg');
+        bg.src = s.bg;
+        bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+
+        if (!state.isDark || state.room !== 1) {
+            // Only show items if they haven't been picked up
+            if (state.room === 1) {
+                if (!state.inventory.includes("Vase")) document.getElementById('obj-Vase').style.display = 'block';
+                if (!state.inventory.includes("Card")) document.getElementById('obj-Card').style.display = 'block';
+            }
+            if (state.room === 2) {
+                if (!state.inventory.includes("Phone")) document.getElementById('obj-Phone').style.display = 'block';
+                if (!state.inventory.includes("Notepad")) document.getElementById('obj-Notepad').style.display = 'block';
+            }
+        }
         s.setup();
     }
 
