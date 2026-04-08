@@ -18,8 +18,14 @@
 
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        #winter { position: absolute; bottom: 110px; width: 124px; z-index: 5; transition: left linear; }
-        #npc { position: absolute; bottom: 110px; right: 150px; width: 135px; display: none; z-index: 4; }
+        /* Winter base size is 75% of original (124px). z-index 5 keeps her behind dialogue but in front of BG */
+        #winter { 
+            position: absolute; 
+            width: 124px; 
+            z-index: 5; 
+            transform-origin: bottom center;
+            pointer-events: none;
+        }
         
         #title-screen {
             position: absolute; width: 100%; height: 100%; 
@@ -27,14 +33,15 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; cursor: pointer;
         }
+        /* Title Scaling: Subtitle is 30px, Main Title is 125% of that (37.5px) */
         #title-screen .sub-title { font-size: 30px; letter-spacing: 5px; color: #be9b7b; margin: 0; }
-        #title-screen .main-title { font-size: 63px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
-        #title-screen .author { font-size: 24px; letter-spacing: 3px; color: #8a735d; margin-bottom: 60px; }
-        #title-screen p { font-size: 21px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
+        #title-screen .main-title { font-size: 37.5px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; }
+        #title-screen .author { font-size: 20px; letter-spacing: 3px; color: #8a735d; margin-bottom: 40px; }
+        #title-screen p { font-size: 18px; letter-spacing: 3px; color: #be9b7b; animation: blink 2s infinite; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
+        .world-obj { position: absolute; z-index: 4; pointer-events: none; image-rendering: pixelated; display: none; }
         
         #inventory { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
@@ -69,11 +76,9 @@
     <img id="obj-Vase" src="ItemVase.png" class="world-obj">
     <img id="obj-Card" src="ItemCard.png" class="world-obj">
     
-    <img id="winter" src="WinterIdle.png" style="left: 150px;">
-    <img id="npc" src="KidnapperTalk.png">
+    <img id="winter" src="WinterIdle.png">
     
     <div id="dialogue"></div>
-    
     <div id="inventory">
         <div class="slot" id="s0" onclick="selectItem(0)"></div>
         <div class="slot" id="s1" onclick="selectItem(1)"></div>
@@ -83,7 +88,7 @@
         <div class="slot" id="s5" onclick="selectItem(5)"></div>
         <div id="active-txt-label">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
     </div>
-    <div id="click-layer"></div>
+    <div id="click-layer" style="position:absolute; width:100%; height:100%; z-index:7;"></div>
 </div>
 
 <script>
@@ -92,11 +97,17 @@
 
     const state = {
         room: 1, inventory: [], activeItem: null,
-        isDark: true, winterPos: 150, isWalking: false,
-        cutscene: false, started: false
+        isDark: true, 
+        winterX: 150, 
+        winterY: 500, // Starting Y position
+        isWalking: false, started: false
     };
 
-    let currentAssets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
+    // Asset Map
+    const sprites = {
+        side: { idle: "WinterIdle.png", walk: "WinterWalk1.png" },
+        away: { idle: "WinterIdleAway.png", walk: "WinterWalkAway1.png" }
+    };
 
     function startGame() {
         if (state.started) return;
@@ -104,34 +115,68 @@
         document.getElementById('title-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('title-screen').style.display = 'none';
-            say("Ugh... where am I? It's pitch black in here.");
+            say("Where am I? It's freezing...");
         }, 1000);
+        updateWinterVisuals();
         renderScene();
     }
 
-    function moveWinter(targetX, callback) {
-        if (state.isWalking || state.cutscene || !state.started) return;
+    function updateWinterVisuals() {
+        const winter = document.getElementById('winter');
+        // Perspective Math: At y=0, scale is 0.75. At y=720, scale is 1.0.
+        const currentScale = 0.75 + (0.25 * (state.winterY / 720));
+        winter.style.left = state.winterX + 'px';
+        winter.style.top = state.winterY + 'px';
+        winter.style.transform = `scale(${currentScale})`;
+    }
+
+    function moveWinter(targetX, targetY, callback) {
+        if (state.isWalking || !state.started) return;
         state.isWalking = true;
         const winter = document.getElementById('winter');
-        winter.style.transform = targetX < state.winterPos ? "scaleX(-1)" : "scaleX(1)";
+        
+        const speed = 4;
+        let frameCount = 0;
 
-        let frame = 0;
-        const animInterval = setInterval(() => {
-            winter.src = (frame % 2 === 0) ? currentAssets.walk : currentAssets.idle;
-            frame++;
-        }, 220);
+        const step = () => {
+            const dx = targetX - state.winterX;
+            const dy = targetY - state.winterY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
 
-        const duration = Math.abs(targetX - state.winterPos) * 3.5; 
-        winter.style.transitionDuration = `${duration}ms`;
-        winter.style.left = targetX + 'px';
+            if (distance < speed) {
+                state.winterX = targetX;
+                state.winterY = targetY;
+                state.isWalking = false;
+                winter.src = Math.abs(dy) > Math.abs(dx) && dy < 0 ? sprites.away.idle : sprites.side.idle;
+                updateWinterVisuals();
+                if (callback) callback();
+                return;
+            }
 
-        setTimeout(() => {
-            clearInterval(animInterval);
-            winter.src = currentAssets.idle;
-            state.isWalking = false;
-            state.winterPos = targetX;
-            if (callback) callback();
-        }, duration);
+            // Decide which animation set to use
+            const movingAway = Math.abs(dy) > Math.abs(dx) && dy < 0;
+            const currentSet = movingAway ? sprites.away : sprites.side;
+            
+            // Flip if moving left
+            const flip = dx < 0 ? "scaleX(-1)" : "scaleX(1)";
+            
+            state.winterX += (dx / distance) * speed;
+            state.winterY += (dy / distance) * speed;
+
+            // Simple frame toggle
+            frameCount++;
+            winter.src = (Math.floor(frameCount / 15) % 2 === 0) ? currentSet.walk : currentSet.idle;
+            
+            // Apply scale + flip
+            const currentScale = 0.75 + (0.25 * (state.winterY / 720));
+            winter.style.left = state.winterX + 'px';
+            winter.style.top = state.winterY + 'px';
+            winter.style.transform = `${flip} scale(${currentScale})`;
+
+            requestAnimationFrame(step);
+        };
+
+        requestAnimationFrame(step);
     }
 
     function setObjPos(id, rawX, rawY, w) {
@@ -146,37 +191,31 @@
         1: {
             bg: "Room1_Library.png",
             setup: () => {
-                // Torch (608x407)
+                // Torch
                 setObjPos("obj-Torch", 608, 407, 60);
                 createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
                     if (state.isDark) {
-                        pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
+                        pickup("Torch", "ItemTorch.png", "The torch is lit!");
                         state.isDark = false; 
                         renderScene();
                     }
                 });
 
-                // Books (1016x344)
-                setObjPos("obj-Books", 1016, 344, 75);
-                createHotspot(1016 * SCALE_X, 344 * SCALE_Y, 80, 80, "Books", () => {
-                    pickup("Books", "ItemBooks.png", "Legends of Avalon... interesting.");
-                });
+                // Books
+                setObjPos("obj-Books", 951, 310, 75);
+                createHotspot(951 * SCALE_X, 310 * SCALE_Y, 80, 80, "Books", () => pickup("Books", "ItemBooks.png", "Legends of Avalon..."));
 
-                // Vase (822x386)
-                setObjPos("obj-Vase", 822, 386, 50);
-                createHotspot(822 * SCALE_X, 386 * SCALE_Y, 60, 80, "Vase", () => {
-                    pickup("Vase", "ItemVase.png", "An old ceramic vase.");
-                });
+                // Vase
+                setObjPos("obj-Vase", 779, 302, 50);
+                createHotspot(779 * SCALE_X, 302 * SCALE_Y, 60, 80, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
 
-                // Card (458x208)
-                setObjPos("obj-Card", 458, 208, 30);
-                createHotspot(458 * SCALE_X, 208 * SCALE_Y, 40, 60, "Card", () => {
-                    pickup("Card", "ItemCard.png", "A playing card... this might be useful for a lock.");
-                });
+                // Card
+                setObjPos("obj-Card", 436, 180, 30);
+                createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card."));
 
-                // Exit (1253x488)
+                // Exit
                 createHotspot(1253 * SCALE_X, 488 * SCALE_Y, 120, 300, "Exit", () => {
-                    if (state.isDark) say("I'm not going anywhere in the dark.");
+                    if (state.isDark) say("Too dark...");
                     else say("I should look around more.");
                 });
             }
@@ -188,16 +227,25 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = () => moveWinter(x > 1150 ? x - 120 : x, action);
+        // When clicking a hotspot, move Winter to that specific coordinate
+        hs.onclick = (e) => {
+            e.stopPropagation();
+            moveWinter(x, y, action);
+        };
         document.getElementById('click-layer').appendChild(hs);
     }
+
+    // Generic floor click for movement
+    document.getElementById('click-layer').onclick = (e) => {
+        const rect = e.target.getBoundingClientRect();
+        moveWinter(e.clientX - rect.left - 60, e.clientY - rect.top - 100);
+    };
 
     function pickup(name, img, msg) {
         if (state.inventory.includes(name)) return;
         state.inventory.push(name);
         const obj = document.getElementById('obj-' + name);
         if (obj) obj.style.display = 'none';
-        
         const slot = document.getElementById('s' + (state.inventory.length - 1));
         if (slot) slot.innerHTML = `<img src="${img}">`;
         say(msg);
@@ -213,34 +261,25 @@
 
     function say(msg) {
         const d = document.getElementById('dialogue');
-        d.innerText = msg;
-        d.style.display = 'block';
-        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4500);
+        d.innerText = msg; d.style.display = 'block';
+        setTimeout(() => { if(d.innerText === msg) d.style.display = 'none'; }, 4000);
     }
 
     function renderScene() {
         if (!state.started) return;
         document.getElementById('click-layer').innerHTML = "";
-        const s = scenes[state.room];
         const bg = document.getElementById('bg');
-        bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+        bg.style.filter = state.isDark ? "brightness(0.08)" : "none";
         
-        // Torch is visible if it's dark OR if it hasn't been picked up yet
         const torchEl = document.getElementById('obj-Torch');
-        if (torchEl) {
-            torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
-        }
+        if (torchEl) torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
 
-        // Room 1 Item Visibility (revealed after lighting)
         ["Books", "Vase", "Card"].forEach(name => {
             const el = document.getElementById('obj-' + name);
-            if (el) {
-                if (!state.isDark && !state.inventory.includes(name)) el.style.display = 'block';
-                else el.style.display = 'none';
-            }
+            if (el) el.style.display = (!state.isDark && !state.inventory.includes(name)) ? 'block' : 'none';
         });
 
-        s.setup();
+        scenes[state.room].setup();
     }
 </script>
 </body>
