@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>S&D: Excalibur's Labyrinth</title>
+    <title>S&D: Excalibur's Labyrinth - Adventure Edition</title>
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
         #game-container { position: relative; width: 800px; height: 600px; margin: 20px auto; border: 4px solid #be9b7b; background: #000; }
@@ -10,7 +10,6 @@
         #winter { position: absolute; bottom: 80px; width: 110px; z-index: 5; transition: left linear; }
         #npc { position: absolute; bottom: 80px; right: 100px; width: 120px; display: none; z-index: 4; }
         
-        /* Objects visible in the world */
         .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
 
         #inventory { position: absolute; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); border-top: 2px solid #be9b7b; display: flex; align-items: center; padding: 0 20px; z-index: 10; }
@@ -18,7 +17,7 @@
         .slot img { width: 40px; height: 40px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 8px #fff; }
 
-        #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; }
+        #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; line-height: 1.4; }
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
     </style>
 </head>
@@ -31,6 +30,9 @@
     <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 600px; top: 460px; width: 25px;">
     <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 300px; top: 320px; width: 25px;">
     <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 500px; top: 320px; width: 35px;">
+    
+    <img id="obj-Cue" src="ItemCue.png" class="world-obj" style="left: 120px; top: 350px; width: 80px;">
+    <img id="obj-Balls" src="ItemBalls.png" class="world-obj" style="left: 150px; top: 380px; width: 30px;">
     
     <img id="winter" src="WinterIdle.png" style="left: 100px;">
     <img id="npc" src="KidnapperTalk.png">
@@ -55,24 +57,24 @@
         activeItem: null,
         isDark: true,
         winterPos: 100,
-        isWalking: false
+        isWalking: false,
+        cutscene: false
     };
 
-    const assets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
+    let currentAssets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
 
     function moveWinter(targetX, callback) {
-        if (state.isWalking) return;
+        if (state.isWalking || state.cutscene) return;
         state.isWalking = true;
         const winter = document.getElementById('winter');
         
-        // Mirroring Logic
         winter.style.transform = targetX < state.winterPos ? "scaleX(-1)" : "scaleX(1)";
 
         let frame = 0;
         const animInterval = setInterval(() => {
-            winter.src = (frame % 2 === 0) ? assets.walk : assets.idle;
+            winter.src = (frame % 2 === 0) ? currentAssets.walk : currentAssets.idle;
             frame++;
-        }, 220); // Steady walking speed
+        }, 220);
 
         const duration = Math.abs(targetX - state.winterPos) * 5;
         winter.style.transitionDuration = `${duration}ms`;
@@ -80,7 +82,7 @@
 
         setTimeout(() => {
             clearInterval(animInterval);
-            winter.src = assets.idle;
+            winter.src = currentAssets.idle;
             state.isWalking = false;
             state.winterPos = targetX;
             if (callback) callback();
@@ -92,7 +94,7 @@
             bg: "Room1_Library.png",
             setup: () => {
                 createHotspot(380, 200, 60, 100, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "Where am I? Why is it so dark? I better find some light.");
+                    pickup("Torch", "ItemTorch.png", "Where am I? I better find some light.");
                     state.isDark = false;
                     renderScene();
                 });
@@ -107,17 +109,17 @@
         2: {
             bg: "Room2_Hallway.png",
             setup: () => {
-                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(1, 700)); // Go back to Room 1
-                createHotspot(300, 300, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... I wonder who this belongs to?"));
-                createHotspot(500, 300, 60, 60, "Notepad", () => {
+                createHotspot(0, 50, 50, 500, "Back", () => changeRoom(1, 700));
+                createHotspot(300, 320, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... I wonder who this belongs to?"));
+                createHotspot(500, 320, 60, 60, "Notepad", () => {
                     say("'I've failed. I can't find the sword...' - Detective Smith.");
                     pickup("Notepad", "ItemNotepad.png", "Smith's notepad... maybe this has clues.");
                 });
                 createHotspot(730, 100, 70, 400, "Door", () => {
                     if (state.activeItem === "Card") {
-                        say("Hey, maybe I can use this card pick the lock... It worked!");
+                        say("I'll use the card to pick the lock... It worked!");
                         setTimeout(() => changeRoom(3, 50), 2000);
-                    } else say("Hmm, that one's locked. I'll need a key or something.");
+                    } else say("Hmm, that one's locked.");
                 });
             }
         },
@@ -125,26 +127,60 @@
             bg: "Room3_Billiards.png",
             setup: () => {
                 createHotspot(0, 50, 50, 500, "Back", () => changeRoom(2, 650));
-                createHotspot(250, 300, 150, 100, "Table", () => {
-                    pickup("Cue", "ItemCue.png", "I'll keep this pool cue to defend myself.");
-                    setTimeout(() => pickup("Balls", "ItemBalls.png", "And these pool balls too."), 1000);
+                
+                // Window Hotspot (25% in)
+                createHotspot(200, 100, 100, 200, "Window", () => {
+                    say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.");
                 });
-                createHotspot(420, 150, 80, 150, "Fireplace", () => {
+
+                // Pool Table Hotspot (Far Left)
+                createHotspot(120, 350, 100, 100, "Pool Table", () => {
+                    pickup("Cue", "ItemCue.png", "Added Pool Cue to inventory.");
+                    setTimeout(() => pickup("Balls", "ItemBalls.png", "Added Pool Balls to inventory."), 1000);
+                });
+
+                // Fireplace Hotspot (75% in)
+                createHotspot(600, 150, 120, 250, "Fireplace", () => {
                     if (state.activeItem === "Vase") {
-                        say("If I put the flower in the vase here... the fireplace is moving!");
-                        setTimeout(() => changeRoom(5, 50), 2500);
-                    } else say("Someone dumped this flower here? Shame to let it go to waste.");
+                        triggerSecretPassage();
+                    } else {
+                        say("Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in.");
+                    }
                 });
             }
         },
         5: {
             bg: "Room5_Rooftop.png",
             setup: () => {
+                currentAssets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
                 document.getElementById('npc').style.display = 'block';
                 say("Kidnapper: 'Impressive, O'Brien. You've navigated the Labyrinth.'");
             }
         }
     };
+
+    function triggerSecretPassage() {
+        state.cutscene = true;
+        say("There. Much better.");
+        document.getElementById('bg').src = "Room3_Billiards2.png";
+        
+        setTimeout(() => {
+            const winter = document.getElementById('winter');
+            currentAssets = { idle: "WinterIdleShock.png", walk: "WinterWalk1_Shock.png" };
+            winter.src = currentAssets.idle;
+            say("What's happening? What's that sound?");
+        }, 3000);
+
+        setTimeout(() => {
+            document.getElementById('bg').src = "Room3_Billiards3.png";
+            say("A secret passage? Where does it lead?");
+        }, 6000);
+
+        setTimeout(() => {
+            state.cutscene = false; // Allow the forced walk
+            moveWinter(850, () => changeRoom(5, 50));
+        }, 10000);
+    }
 
     function createHotspot(x, y, w, h, name, action) {
         const hs = document.createElement('div');
@@ -166,7 +202,7 @@
     }
 
     function selectItem(idx) {
-        if (!state.inventory[idx]) return;
+        if (!state.inventory[idx] || state.cutscene) return;
         state.activeItem = state.inventory[idx];
         document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
         document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
@@ -198,7 +234,6 @@
         bg.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
 
         if (!state.isDark || state.room !== 1) {
-            // Only show items if they haven't been picked up
             if (state.room === 1) {
                 if (!state.inventory.includes("Vase")) document.getElementById('obj-Vase').style.display = 'block';
                 if (!state.inventory.includes("Card")) document.getElementById('obj-Card').style.display = 'block';
@@ -206,6 +241,10 @@
             if (state.room === 2) {
                 if (!state.inventory.includes("Phone")) document.getElementById('obj-Phone').style.display = 'block';
                 if (!state.inventory.includes("Notepad")) document.getElementById('obj-Notepad').style.display = 'block';
+            }
+            if (state.room === 3) {
+                if (!state.inventory.includes("Cue")) document.getElementById('obj-Cue').style.display = 'block';
+                if (!state.inventory.includes("Balls")) document.getElementById('obj-Balls').style.display = 'block';
             }
         }
         s.setup();
