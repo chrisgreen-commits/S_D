@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>S&D: Excalibur's Labyrinth - Adventure Edition</title>
+    <title>S&D: Excalibur's Labyrinth</title>
     <style>
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
         #game-container { position: relative; width: 800px; height: 600px; margin: 20px auto; border: 4px solid #be9b7b; background: #000; }
@@ -10,13 +10,23 @@
         #winter { position: absolute; bottom: 80px; width: 110px; z-index: 5; transition: left linear; }
         #npc { position: absolute; bottom: 80px; right: 100px; width: 120px; display: none; z-index: 4; }
         
-        .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
+        /* Cinematic Title Overlay */
+        #title-screen {
+            position: absolute; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.4); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; transition: opacity 1s;
+        }
+        #title-screen h1 { font-size: 42px; letter-spacing: 5px; color: #fff; text-shadow: 0 0 15px #be9b7b; margin: 0; }
+        #title-screen p { font-size: 14px; letter-spacing: 2px; color: #be9b7b; margin-top: 20px; animation: blink 2s infinite; }
 
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .world-obj { position: absolute; z-index: 6; pointer-events: none; image-rendering: pixelated; display: none; }
         #inventory { position: absolute; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); border-top: 2px solid #be9b7b; display: flex; align-items: center; padding: 0 20px; z-index: 10; }
         .slot { width: 50px; height: 50px; border: 1px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .slot img { width: 40px; height: 40px; }
         .active-slot { border-color: #fff; box-shadow: 0 0 8px #fff; }
-
         #dialogue { position: absolute; top: 20px; width: 84%; left: 8%; background: rgba(0,0,0,0.95); border: 2px solid #be9b7b; padding: 15px; display: none; z-index: 20; color: white; line-height: 1.4; }
         .hotspot { position: absolute; cursor: pointer; z-index: 8; }
     </style>
@@ -24,13 +34,18 @@
 <body>
 
 <div id="game-container">
+    <div id="title-screen" onclick="startGame()">
+        <h1>SHADOWS & DAYLIGHT</h1>
+        <h1 style="font-size: 24px;">EXCALIBUR'S LABYRINTH</h1>
+        <p>CLICK ANYWHERE TO BEGIN</p>
+    </div>
+
     <img id="bg" src="Room1_Library.png">
     
     <img id="obj-Vase" src="ItemVase.png" class="world-obj" style="left: 400px; top: 410px; width: 35px;">
     <img id="obj-Card" src="ItemCard.png" class="world-obj" style="left: 600px; top: 460px; width: 25px;">
     <img id="obj-Phone" src="ItemPhone.png" class="world-obj" style="left: 300px; top: 320px; width: 25px;">
     <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj" style="left: 500px; top: 320px; width: 35px;">
-    
     <img id="obj-Cue" src="ItemCue.png" class="world-obj" style="left: 120px; top: 350px; width: 80px;">
     <img id="obj-Balls" src="ItemBalls.png" class="world-obj" style="left: 150px; top: 380px; width: 30px;">
     
@@ -52,22 +67,28 @@
 
 <script>
     const state = {
-        room: 1,
-        inventory: [],
-        activeItem: null,
-        isDark: true,
-        winterPos: 100,
-        isWalking: false,
-        cutscene: false
+        room: 1, inventory: [], activeItem: null,
+        isDark: true, winterPos: 100, isWalking: false,
+        cutscene: false, started: false
     };
 
     let currentAssets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
 
+    function startGame() {
+        if (state.started) return;
+        state.started = true;
+        document.getElementById('title-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('title-screen').style.display = 'none';
+            say("Ugh... where am I? It's pitch black in here.");
+        }, 1000);
+        renderScene();
+    }
+
     function moveWinter(targetX, callback) {
-        if (state.isWalking || state.cutscene) return;
+        if (state.isWalking || state.cutscene || !state.started) return;
         state.isWalking = true;
         const winter = document.getElementById('winter');
-        
         winter.style.transform = targetX < state.winterPos ? "scaleX(-1)" : "scaleX(1)";
 
         let frame = 0;
@@ -94,14 +115,13 @@
             bg: "Room1_Library.png",
             setup: () => {
                 createHotspot(380, 200, 60, 100, "Torch", () => {
-                    pickup("Torch", "ItemTorch.png", "Where am I? I better find some light.");
-                    state.isDark = false;
-                    renderScene();
+                    pickup("Torch", "ItemTorch.png", "The torch is lit! I can see now.");
+                    state.isDark = false; renderScene();
                 });
-                createHotspot(400, 400, 60, 60, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase. I'll take it."));
-                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card. This might be useful."));
+                createHotspot(400, 400, 60, 60, "Vase", () => pickup("Vase", "ItemVase.png", "An old vase."));
+                createHotspot(600, 450, 60, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card."));
                 createHotspot(750, 50, 50, 500, "Exit", () => {
-                    if (state.isDark) say("I need to find a light source first.");
+                    if (state.isDark) say("I need a light first.");
                     else changeRoom(2, 50); 
                 });
             }
@@ -110,16 +130,16 @@
             bg: "Room2_Hallway.png",
             setup: () => {
                 createHotspot(0, 50, 50, 500, "Back", () => changeRoom(1, 700));
-                createHotspot(300, 320, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... I wonder who this belongs to?"));
+                createHotspot(300, 320, 50, 50, "Phone", () => pickup("Phone", "ItemPhone.png", "Detective Ambrose Smith... what happened to him?"));
                 createHotspot(500, 320, 60, 60, "Notepad", () => {
                     say("'I've failed. I can't find the sword...' - Detective Smith.");
-                    pickup("Notepad", "ItemNotepad.png", "Smith's notepad... maybe this has clues.");
+                    pickup("Notepad", "ItemNotepad.png", "His notepad... might have clues.");
                 });
                 createHotspot(730, 100, 70, 400, "Door", () => {
                     if (state.activeItem === "Card") {
-                        say("I'll use the card to pick the lock... It worked!");
+                        say("I'll shim the latch with the card... Success!");
                         setTimeout(() => changeRoom(3, 50), 2000);
-                    } else say("Hmm, that one's locked.");
+                    } else say("It's locked tight.");
                 });
             }
         },
@@ -127,25 +147,14 @@
             bg: "Room3_Billiards.png",
             setup: () => {
                 createHotspot(0, 50, 50, 500, "Back", () => changeRoom(2, 650));
-                
-                // Window Hotspot (25% in)
-                createHotspot(200, 100, 100, 200, "Window", () => {
-                    say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.");
-                });
-
-                // Pool Table Hotspot (Far Left)
+                createHotspot(200, 100, 100, 200, "Window", () => say("High in the mountains... looks like Europe."));
                 createHotspot(120, 350, 100, 100, "Pool Table", () => {
-                    pickup("Cue", "ItemCue.png", "Added Pool Cue to inventory.");
-                    setTimeout(() => pickup("Balls", "ItemBalls.png", "Added Pool Balls to inventory."), 1000);
+                    pickup("Cue", "ItemCue.png", "A pool cue... might work as a weapon.");
+                    setTimeout(() => pickup("Balls", "ItemBalls.png", "I'll grab these balls too."), 1000);
                 });
-
-                // Fireplace Hotspot (75% in)
                 createHotspot(600, 150, 120, 250, "Fireplace", () => {
-                    if (state.activeItem === "Vase") {
-                        triggerSecretPassage();
-                    } else {
-                        say("Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in.");
-                    }
+                    if (state.activeItem === "Vase") triggerSecretPassage();
+                    else say("Someone dumped this flower here? Shame. If only I had a vase.");
                 });
             }
         },
@@ -154,7 +163,7 @@
             setup: () => {
                 currentAssets = { idle: "WinterIdle.png", walk: "WinterWalk1.png" };
                 document.getElementById('npc').style.display = 'block';
-                say("Kidnapper: 'Impressive, O'Brien. You've navigated the Labyrinth.'");
+                say("Kidnapper: 'Impressive work, O'Brien. World renowned detectives failed where you succeeded.'");
             }
         }
     };
@@ -165,9 +174,8 @@
         document.getElementById('bg').src = "Room3_Billiards2.png";
         
         setTimeout(() => {
-            const winter = document.getElementById('winter');
             currentAssets = { idle: "WinterIdleShock.png", walk: "WinterWalk1_Shock.png" };
-            winter.src = currentAssets.idle;
+            document.getElementById('winter').src = currentAssets.idle;
             say("What's happening? What's that sound?");
         }, 3000);
 
@@ -177,7 +185,7 @@
         }, 6000);
 
         setTimeout(() => {
-            state.cutscene = false; // Allow the forced walk
+            state.cutscene = false;
             moveWinter(850, () => changeRoom(5, 50));
         }, 10000);
     }
@@ -224,6 +232,7 @@
     }
 
     function renderScene() {
+        if (!state.started) return;
         document.getElementById('click-layer').innerHTML = "";
         document.getElementById('npc').style.display = 'none';
         document.querySelectorAll('.world-obj').forEach(o => o.style.display = 'none');
@@ -250,7 +259,7 @@
         s.setup();
     }
 
-    window.onload = () => renderScene();
+    // Manual start required via clicking Title
 </script>
 </body>
 </html>
