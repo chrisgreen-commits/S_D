@@ -133,18 +133,16 @@
 
     window.onload = () => {
         updateWinterVisuals();
+        // Set Music Volume to 50%
+        const music = document.getElementById('bg-music');
+        music.volume = 0.5;
     };
 
     function startGame() {
         if (state.started) return;
         state.started = true;
-        
-        // Music logic
         const music = document.getElementById('bg-music');
-        if (state.room === 1) {
-            music.play().catch(e => console.log("Audio play blocked until interaction."));
-        }
-
+        if (state.room === 1) music.play().catch(e => console.log("Audio blocked."));
         document.getElementById('title-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('title-screen').style.display = 'none';
@@ -229,11 +227,13 @@
     const scenes = {
         1: {
             setup: () => {
+                // Torch logic remains same
                 setObjPos("obj-Torch", 608, 407, 60);
                 createHotspot(608 * SCALE_X, 407 * SCALE_Y, 70, 100, "Torch", () => {
                     if (state.isDark) {
                         pickup("Torch", "ItemTorch.png", "A torch! This should help.");
-                        state.isDark = false; renderScene();
+                        state.isDark = false; 
+                        renderScene();
                     }
                 });
 
@@ -246,10 +246,16 @@
                 setObjPos("obj-Card", 436, 180, 30);
                 createHotspot(436 * SCALE_X, 180 * SCALE_Y, 40, 60, "Card", () => pickup("Card", "ItemCard.png", "A playing card?"));
 
+                // Exit logic: Using a function call within the hotspot to ensure 'readBook' is checked when CLICKED
                 createHotspot(1130 * SCALE_X, 402 * SCALE_Y, 120, 250, "Exit", () => {
-                    if (state.isDark) say("I'm not wandering into that hallway in the dark.", true);
-                    else if (!state.readBook) say("I feel like I'm missing something important in this room.", true);
-                    else say("Avalon... that's where I need to go.", true);
+                    if (state.isDark) {
+                        say("I'm not wandering into that hallway in the dark.", true);
+                    } else if (state.readBook === false) {
+                        say("I feel like I'm missing something important in this room.", true);
+                    } else {
+                        say("Avalon... that's where I need to go.", true);
+                        // Progress code would go here!
+                    }
                 });
             }
         }
@@ -260,7 +266,10 @@
         hs.className = 'hotspot';
         hs.style.left = x + 'px'; hs.style.top = y + 'px';
         hs.style.width = w + 'px'; hs.style.height = h + 'px';
-        hs.onclick = (e) => { e.stopPropagation(); moveWinter(x + (w/2), y + h, action); };
+        hs.onclick = (e) => { 
+            e.stopPropagation(); 
+            moveWinter(x + (w/2), y + h, action); 
+        };
         document.getElementById('click-layer').appendChild(hs);
     }
 
@@ -306,13 +315,8 @@
         const bg = document.getElementById('bg');
         bg.style.filter = state.isDark ? "brightness(0.08)" : "none";
         
-        // Music check for current room
         const music = document.getElementById('bg-music');
-        if (state.room === 1) {
-            if (music.paused) music.play();
-        } else {
-            music.pause();
-        }
+        if (state.room === 1 && !music.paused === false) music.play().catch(e => {});
 
         const torchEl = document.getElementById('obj-Torch');
         if (torchEl) torchEl.style.display = (!state.inventory.includes("Torch")) ? 'block' : 'none';
