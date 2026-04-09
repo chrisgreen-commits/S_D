@@ -420,13 +420,16 @@
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
         const kidnapperEl = document.getElementById('kidnapper');
+        const winterEl = document.getElementById('winter');
         if (state.room === 5) {
             const hs = s.hotspots.find(h => h.id === "Kidnapper");
             kidnapperEl.style.left = hs.x + "px";
             kidnapperEl.style.top = hs.y + "px";
             kidnapperEl.style.display = 'block';
+            winterEl.style.width = (93 * 0.75) + "px";
         } else {
             kidnapperEl.style.display = 'none';
+            winterEl.style.width = "93px";
         }
 
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
@@ -471,7 +474,7 @@
             w.src = showShock ? "WinterIdleShock.png" : "WinterIdle.png";
             state.walkFrame = 0;
         }
-        w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
+        w.style.left = (state.winterX - (w.offsetWidth / 2)) + 'px'; w.style.top = (state.winterY - (w.offsetHeight * 1.29)) + 'px';
     }
 
     function startGame() {
