@@ -1,340 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Shadows & Daylight: Labyrinth of Excalibur</title>
-    <style>
-        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
-        #game-container { 
-            position: relative; width: 1280px; height: 720px; 
-            margin: 40px auto; border: 6px solid #be9b7b; 
-            background: #000; overflow: hidden;
-        }
-        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
-        
-        #fade-overlay {
-            position: absolute; width: 100%; height: 100%;
-            background: black; z-index: 90; pointer-events: none;
-            opacity: 0; transition: opacity 0.5s;
-        }
+<meta charset="UTF-8">
+<title>Shadows & Daylight: Labyrinth of Excalibur</title>
 
-        #clue-overlay {
-            position: absolute; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 80;
-            display: none; justify-content: center; align-items: center;
-        }
-        #clue-img { 
-            width: 300px; border: 15px solid #fff; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated;
-        }
+<style>
+body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
+#game-container { position: relative; width: 1280px; height: 720px; margin: 40px auto; border: 6px solid #be9b7b; background: #000; overflow: hidden; }
+#bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
 
-        #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
+#winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
 
-        #interact-prompt {
-            position: absolute; background: rgba(255,255,255,0.9); color: #000;
-            padding: 5px 12px; border-radius: 4px; font-weight: bold;
-            font-size: 20px; z-index: 50; display: none; transform: translate(-50%, -100%);
-            pointer-events: none; border: 2px solid #be9b7b;
-        }
+.world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
+#obj-Vase { width: 54px; }
+#obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20px; }
+#obj-Notepad { width: 22px; } #obj-Torch { width: 40px; } #obj-Card { width: 25px; }
+#obj-Books { width: 50px; } #obj-Cue { width: 60px; }
 
-        #title-screen, #end-screen {
-            position: absolute; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
-        }
-        #end-screen { display: none; opacity: 0; }
-        .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
-        .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
-        
-        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
-        #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
-        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 30px; } #obj-Torch { width: 40px; }
-        #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
-        
-        #inventory-bar { 
-            position: absolute; bottom: 0; width: 100%; height: 100px; 
-            background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
-            display: flex; align-items: center; padding: 0 20px; z-index: 10;
-        }
-        #investigate-btn { font-size: 40px; cursor: pointer; margin-right: 70px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
-        #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
-        .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .slot img { width: 50px; height: 50px; }
-        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; background: #333; }
-        
-        #dialogue { 
-            position: absolute; top: 30px; width: 84%; left: 8%; 
-            background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
-            padding: 22px; display: none; z-index: 20; color: white; 
-            line-height: 1.4; font-size: 22px; cursor: pointer; min-height: 100px;
-        }
-        #dialogue img { float: left; width: 80px; height: 80px; margin-right: 20px; border: 2px solid #be9b7b; image-rendering: pixelated; background: #111; }
-        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; clear: both; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    </style>
+#title-screen {
+    position: absolute; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 100;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+#dialogue {
+    position: absolute; top: 30px; width: 84%; left: 8%;
+    background: rgba(0,0,0,0.95); border: 3px solid #be9b7b;
+    padding: 22px; display: none; z-index: 20; color: white;
+}
+
+#inventory-bar {
+    position: absolute; bottom: 0; width: 100%; height: 100px;
+    background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b;
+    display: flex; align-items: center; padding: 0 20px;
+}
+
+.slot {
+    width: 65px; height: 65px; border: 2px solid #444;
+    margin-right: 10px; display: flex; align-items: center; justify-content: center;
+}
+.active-slot { border-color: #fff; box-shadow: 0 0 10px #fff; }
+</style>
 </head>
+
 <body>
-
 <div id="game-container">
-    <div id="fade-overlay"></div>
-    <div id="clue-overlay" onclick="closeClue()"><img id="clue-img" src="ItemCard.png"></div>
 
-    <audio id="mus-room1" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
-    <audio id="mus-room2" loop><source src="Yacoby_Schwartzy.mp3" type="audio/mpeg"></audio>
-    <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
-    <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
-    
-    <div id="interact-prompt">PRESS E / (A)</div>
-    
-    <div id="title-screen" onclick="startGame()">
-        <div class="title-small">SHADOWS & DAYLIGHT</div>
-        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
-        <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK TO BEGIN</p>
-    </div>
+<div id="title-screen">
+    <h1>LABYRINTH OF EXCALIBUR</h1>
+    <p>Press any key or button</p>
+</div>
 
-    <div id="end-screen" onclick="closeCredits()">
-        <div class="main-title">TO BE CONTINUED...</div>
-        <div class="title-small">Written & created by Christopher Green</div>
-    </div>
+<img id="bg" src="Room1_Library.png">
+<img id="winter" src="WinterIdle.png">
 
-    <img id="bg" src="Room1_Library.png">
-    <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
-    <img id="obj-Books" src="ItemBooks.png" class="world-obj">
-    <img id="obj-Vase" src="ItemVase.png" class="world-obj">
-    <img id="obj-Card" src="ItemCard.png" class="world-obj">
-    <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj">
-    <img id="obj-Phone" src="ItemPhone.png" class="world-obj">
-    <img id="obj-Balls" src="ItemBalls.png" class="world-obj">
-    <img id="obj-Cue" src="ItemCue.png" class="world-obj">
-    <img id="obj-Mug" src="ItemMug.png" class="world-obj">
-    
-    <img id="kidnapper" src="KidnapperTalk1.png">
-    <img id="winter" src="WinterIdle.png">
-    <div id="dialogue" onclick="advanceDialogue()"></div>
+<div id="dialogue" onclick="advanceDialogue()"></div>
 
-    <div id="inventory-bar">
-        <div style="font-size: 14px; color: #be9b7b; margin-right: 15px;">EQUIPPED: <br><span id="active-txt" style="color:#fff">NONE</span></div>
-        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
-        <div id="slots-container">
-            <div class="slot" id="s0" onclick="selectItem(0)"></div>
-            <div class="slot" id="s1" onclick="selectItem(1)"></div>
-            <div class="slot" id="s2" onclick="selectItem(2)"></div>
-            <div class="slot" id="s3" onclick="selectItem(3)"></div>
-            <div class="slot" id="s4" onclick="selectItem(4)"></div>
-            <div class="slot" id="s5" onclick="selectItem(5)"></div>
-            <div class="slot" id="s6" onclick="selectItem(6)"></div>
-            <div class="slot" id="s7" onclick="selectItem(7)"></div>
-            <div class="slot" id="s8" onclick="selectItem(8)"></div>
-        </div>
+<div id="inventory-bar">
+    <div id="slots-container">
+        <div class="slot" id="s0"></div>
+        <div class="slot" id="s1"></div>
+        <div class="slot" id="s2"></div>
     </div>
 </div>
 
+</div>
+
 <script>
-    const GLOBAL_VOLUME = 0.10; 
-    const SCALE_X = 1280 / 1376;
-    const SCALE_Y = 720 / 768;
-    const R_W_SCALE_X = 1280 / 2629; 
-    const R_W_SCALE_Y = 720 / 1479;
 
-    const state = {
-        room: 1, inventory: [], activeItem: null,
-        isDark: true, dialogueStep: 0, remarkMade: false,
-        winterX: 80, winterY: 550, started: false, keys: {},
-        interactable: null, vasePlaced: false, cutsceneStep: 0,
-        kidnapperTalking: false, phoneDead: false, notepadRead: false,
-        lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
-        room2DoorUnlocked: false
-    };
-
-    const dialogueSequences = {
-        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
-        "Phone": ["I wonder who this belongs too? It's an older cell phone. Early 2000s. The contact page says, Detective Ambrose Smith."],
-        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
-        "PhoneDead": ["The phone is completely dead. No way to turn it on."],
-        "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
-        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"]
-    };
-
-    const scenes = {
-        1: { bg: "Room1_Library.png", wall: 216, hotspots: [
-            { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
-            { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
-            { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
-            { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-            { id: "Secret", x: 192, y: 504, action: () => say("Hmm, a secret door. It's locked tight. I'll need to find another way.") },
-            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
-        ]},
-        2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
-            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: (803 * R_W_SCALE_Y) - 50, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
-            { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() } 
-        ]},
-        3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
-            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
-            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
-            { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
-            { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
-            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.") }
-        ]},
-        5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
-        ]}
-    };
-
-    function handleBilliardEntry() {
-        if (state.room2DoorUnlocked) { changeRoom(3); }
-        else if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
-        else say(Math.random() > 0.5 ? "Hmm, that one's locked." : "I'll need a key or something to open this.");
+/* PASSWORD */
+const PASSWORD = "DAYLIGHTER26";
+(function () {
+    let input = prompt("Enter password:");
+    if (input !== PASSWORD) {
+        document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:20%'>Access Denied</h1>";
+        throw new Error("Unauthorized");
     }
+})();
 
-    function advanceDialogue() {
-        const d = document.getElementById('dialogue');
-        const winter = document.getElementById('winter');
-        d.style.backgroundColor = "rgba(0,0,0,0.95)";
+/* STATE */
+const state = {
+    started: false,
+    winterX: 80,
+    winterY: 550,
+    keys: {},
+    walkFrame: 0,
+    frameTimer: 0,
+    inventory: ["Vase","Card","Torch"],
+    activeItem: "Vase",
+    interactable: null
+};
 
-        if (state.cutsceneStep >= 100) {
-            const finalLines = [{ s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
-            const idx = state.cutsceneStep - 100;
-            if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
-            else { d.style.display = 'none'; triggerEnd(); }
-            return;
-        }
+let prevButtons = [];
 
-        const seqName = state.lockpicking ? "Lockpick" : (state.activeItem === "Phone" && state.phoneDead) ? "PhoneDead" : (state.activeItem === "Phone" && state.notepadRead) ? "PhoneClue" : state.activeItem;
-        const seq = dialogueSequences[seqName];
+/* POSITION */
+function positionWinter() {
+    const w = document.getElementById('winter');
+    w.style.left = (state.winterX - 46) + 'px';
+    w.style.top = (state.winterY - 120) + 'px';
+}
 
-        if (seq && state.dialogueStep < seq.length) {
-            let text = seq[state.dialogueStep];
-            if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
-            else if (state.activeItem === "Notepad") {
-                if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
-                else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
-            } else if (seqName === "PhoneClue") {
-                if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
-                else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. Can't imagine an old castle like this has a lot of electrical outlets. I'll have to keep that in mind for later."); state.phoneDead = true; }
-                else say(text);
-            } else if (state.activeItem === "Books" && state.dialogueStep === 1) { say("📖 " + text, true, null, "#5d4037"); state.remarkMade = true; }
-            else say(text);
-            state.dialogueStep++;
-        } else { d.style.display = 'none'; state.isShocked = false; if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); }
-    }
+window.onload = () => positionWinter();
 
-    function say(msg, skipPortrait = false, portraitOverride = null, bgOverride = null) {
-        const d = document.getElementById('dialogue');
-        if (bgOverride) d.style.backgroundColor = bgOverride;
-        let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
-        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press A to continue)</span>`;
-        d.style.display = 'block';
-    }
+/* INPUT */
+function handleInput() {
+    let dx = 0, dy = 0;
 
-    function handleFlower() {
-        if (state.vasePlaced) changeRoom(5); 
-        else if (state.activeItem === "Vase") { document.getElementById('bg').src = "Room3_Billiards2.png"; say("Much better!"); state.vasePlaced = true; } 
-        else say("Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in.");
-    }
+    if (state.keys["KeyW"]) dy -= 5;
+    if (state.keys["KeyS"]) dy += 5;
+    if (state.keys["KeyA"]) dx -= 5;
+    if (state.keys["KeyD"]) dx += 5;
 
-    function pickup(name, img, msg) {
-        state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
-        const idx = state.inventory.length - 1; if(idx < 9) document.getElementById('s' + idx).innerHTML = `<img src="${img}">`;
-        say(msg);
-    }
+    const gp = navigator.getGamepads()[0];
 
-    function checkProximity() {
-        const prompt = document.getElementById('interact-prompt');
-        let found = null;
-        if (scenes[state.room].hotspots) {
-            scenes[state.room].hotspots.forEach(hs => {
-                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret"].includes(hs.id);
-                if (!isTransition && !["Flower", "Kidnapper", "Window"].includes(hs.id) && state.inventory.includes(hs.id)) return;
-                const dx = Math.abs(state.winterX - hs.x);
-                const dy = Math.abs(state.winterY - hs.y);
-                const rangeX = isTransition ? 100 : 75; 
-                const rangeY = isTransition ? 250 : 150;
-                if (dx < rangeX && dy < rangeY) found = hs;
-            });
-        }
-        state.interactable = found;
-        if (found) {
-            prompt.style.display = 'block'; prompt.style.left = state.winterX + 'px';
-            prompt.style.top = (state.winterY - (state.room === 5 ? 100 : 180)) + 'px';
-        } else prompt.style.display = 'none';
-    }
+    if (gp) {
+        dx += gp.axes[0] * 5;
+        dy += gp.axes[1] * 5;
 
-    function changeRoom(id, isInitial = false) {
-        const fade = document.getElementById('fade-overlay'); fade.style.opacity = "1";
-        setTimeout(() => {
-            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5') };
-            Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
-            state.room = id; state.winterX = (id === 1 && !isInitial) ? 1100 : 80; state.winterY = 550;
-            const currentMus = musicMap[id]; if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
-            renderScene(); fade.style.opacity = "0";
-        }, 500);
-    }
+        gp.buttons.forEach((btn, i) => {
+            const prev = prevButtons[i] || false;
 
-    function renderScene() {
-        const s = scenes[state.room]; document.getElementById('bg').src = s.bg;
-        document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
-        document.getElementById('kidnapper').style.display = (state.room === 5) ? 'block' : 'none';
-        ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
-            const el = document.getElementById('obj-' + name); if (!el) return;
-            const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
-            if (hs && !state.inventory.includes(name)) {
-                el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
-                el.style.display = (state.room === 1 && state.isDark && name !== "Torch") ? 'none' : 'block';
-            } else el.style.display = 'none';
+            if (btn.pressed && !prev) {
+                const dialogueOpen = document.getElementById('dialogue').style.display === 'block';
+
+                if (!state.started) {
+                    startGame();
+                } else if (dialogueOpen) {
+                    advanceDialogue();
+                } else {
+                    if (i === 0 && state.interactable) state.interactable.action(); // A
+                    if (i === 2) investigateItem(); // X
+                    if (i === 4) cycleInventory(-1); // LB
+                    if (i === 5) cycleInventory(1);  // RB
+                }
+            }
+
+            prevButtons[i] = btn.pressed;
         });
     }
 
-    function updateMovement() {
-        if (document.getElementById('dialogue').style.display === 'block') return;
-        let dx = 0, dy = 0; if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5; if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
-        
-        const w = document.getElementById('winter');
-        if (dx !== 0 || dy !== 0) {
-            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
-            
-            state.frameTimer++;
-            if (state.frameTimer > 10) {
-                // Cycle between Idle and Walk1 for the requested movement feel
-                state.walkFrame = state.walkFrame === 0 ? 1 : 0;
-                w.src = state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png";
-                state.frameTimer = 0;
-            }
-            if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
-        } else {
-            w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
-            state.walkFrame = 0;
+    return { dx, dy };
+}
+
+/* INVENTORY */
+function cycleInventory(dir) {
+    let idx = state.inventory.indexOf(state.activeItem);
+    idx = (idx + dir + state.inventory.length) % state.inventory.length;
+    state.activeItem = state.inventory[idx];
+
+    document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
+    document.getElementById('s' + idx).classList.add('active-slot');
+}
+
+function investigateItem() {
+    say("Nothing remarkable about this.");
+}
+
+/* MOVEMENT */
+function updateMovement(dx, dy) {
+    const w = document.getElementById('winter');
+
+    if (dx !== 0 || dy !== 0) {
+        state.winterX += dx;
+        state.winterY += dy;
+
+        state.frameTimer++;
+        if (state.frameTimer > 8) {
+            state.walkFrame = state.walkFrame === 0 ? 1 : 0;
+            w.src = state.walkFrame ? "WinterWalk1.png" : "WinterIdle.png";
+            state.frameTimer = 0;
         }
-        w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
+
+        if (dx !== 0) w.style.transform = `scaleX(${dx < 0 ? -1 : 1})`;
+    } else {
+        w.src = "WinterIdle.png";
     }
 
-    function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I? Why is it so dark? I better find some light."); gameLoop(); }
-    function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
-    
-    function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
-    function selectItem(idx) {
-        if (!state.inventory[idx]) return; state.activeItem = state.inventory[idx];
-        document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
-        document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
-        document.getElementById('s' + idx).classList.add('active-slot');
-    }
-    function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
-    function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
-    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
+    positionWinter();
+}
 
-    window.addEventListener("keydown", e => {
-        state.keys[e.code] = true;
-        if (e.code === "Enter" && document.getElementById('dialogue').style.display === 'block') advanceDialogue();
-        else if (e.code === "KeyE" && state.interactable) state.interactable.action();
-    });
-    window.addEventListener("keyup", e => state.keys[e.code] = false);
+/* LOOP */
+function gameLoop() {
+    if (!state.started) return;
+
+    const { dx, dy } = handleInput();
+    updateMovement(dx, dy);
+
+    requestAnimationFrame(gameLoop);
+}
+
+/* GAME FLOW */
+function startGame() {
+    state.started = true;
+    document.getElementById('title-screen').style.display = 'none';
+    positionWinter();
+    say("Where am I?");
+    gameLoop();
+}
+
+/* DIALOGUE */
+let dialogueStep = 0;
+const lines = ["Where am I?", "This place feels strange..."];
+
+function say(text) {
+    const d = document.getElementById('dialogue');
+    d.innerHTML = text + "<br><span>(Click or press any button)</span>";
+    d.style.display = 'block';
+}
+
+function advanceDialogue() {
+    dialogueStep++;
+    if (dialogueStep < lines.length) say(lines[dialogueStep]);
+    else document.getElementById('dialogue').style.display = 'none';
+}
+
+/* KEYBOARD */
+window.addEventListener("keydown", e => {
+    state.keys[e.code] = true;
+
+    const dialogueOpen = document.getElementById('dialogue').style.display === 'block';
+
+    if (!state.started) startGame();
+    else if (dialogueOpen) advanceDialogue();
+});
+
+window.addEventListener("keyup", e => state.keys[e.code] = false);
+
 </script>
 </body>
 </html>
