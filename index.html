@@ -10,9 +10,8 @@
             margin: 40px auto; border: 6px solid #be9b7b; 
             background: #000; overflow: hidden;
         }
-        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
+        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; z-index: 1; }
         
-        /* Password Screen */
         #password-screen {
             position: absolute; width: 100%; height: 100%; 
             background: #000; z-index: 200;
@@ -37,9 +36,9 @@
         }
         #clue-img { width: 300px; border: 15px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated; }
 
-        #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
+        #winter { position: absolute; width: 93px; z-index: 10; transform-origin: bottom center; pointer-events: none; }
         #winter.small { width: 58px; }
-        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
+        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 9; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
@@ -54,19 +53,18 @@
             display: none; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
         }
-        #end-screen { opacity: 0; }
-        .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
-        .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
-        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
-        #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
-        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 60px; } /* Doubled size */
-        #obj-Torch { width: 40px; } #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
+        .world-obj { position: absolute; image-rendering: pixelated; display: none; }
+        /* Room 1 objects have low z-index by default to hide behind darkened BG */
+        #obj-Mug { width: 17.5px; z-index: 5; } #obj-Balls { width: 35px; z-index: 5; } #obj-Phone { width: 20.1px; z-index: 5; } 
+        #obj-Notepad { width: 21.8px; z-index: 5; } #obj-Vase { width: 60px; z-index: 5; }
+        #obj-Torch { width: 40px; z-index: 20; } /* Torch is always above the darkness */
+        #obj-Card { width: 25px; z-index: 5; } #obj-Books { width: 50px; z-index: 5; } #obj-Cue { width: 60px; z-index: 5; }
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
-            display: flex; align-items: center; padding: 0 20px; z-index: 10;
+            display: flex; align-items: center; padding: 0 20px; z-index: 100;
         }
         #investigate-btn { font-size: 40px; cursor: pointer; margin-right: 70px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
         #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
@@ -77,7 +75,7 @@
         #dialogue { 
             position: absolute; top: 30px; width: 84%; left: 8%; 
             background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
-            padding: 22px; display: none; z-index: 20; color: white; 
+            padding: 22px; display: none; z-index: 110; color: white; 
             line-height: 1.4; font-size: 22px; cursor: pointer; min-height: 100px;
         }
         #dialogue img { float: left; width: 80px; height: 80px; margin-right: 20px; border: 2px solid #be9b7b; image-rendering: pixelated; background: #111; }
@@ -101,16 +99,16 @@
     <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
     
-    <div id="interact-prompt">PRESS E / (ANY BUTTON)</div>
+    <div id="interact-prompt">PRESS E / (A)</div>
     
     <div id="title-screen" onclick="startGame()">
         <div class="title-small">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK OR PRESS ANY BUTTON TO BEGIN</p>
+        <p style="animation: blink 2s infinite;">PRESS ANY BUTTON TO BEGIN</p>
     </div>
 
-    <div id="end-screen" onclick="closeCredits()">
+    <div id="end-screen" onclick="location.reload()">
         <div class="main-title">TO BE CONTINUED...</div>
         <div class="title-small">Written & created by Christopher Green</div>
     </div>
@@ -171,7 +169,7 @@
                 state.authenticated = true;
                 document.getElementById('password-screen').style.display = 'none';
                 document.getElementById('title-screen').style.display = 'flex';
-                requestAnimationFrame(authLoop);
+                requestAnimationFrame(globalGamepadLoop); 
             } else {
                 alert("ACCESS DENIED");
                 e.target.value = "";
@@ -179,19 +177,33 @@
         }
     });
 
-    function authLoop() {
-        if (state.started) return;
+    // Unified controller checking for the whole lifecycle
+    function globalGamepadLoop() {
         const gp = navigator.getGamepads()[0];
-        if (gp && gp.buttons.some(b => b.pressed)) startGame();
-        if (!state.started) requestAnimationFrame(authLoop);
+        if (gp) {
+            const currentButtons = gp.buttons.map(b => b.pressed);
+            const pressedNow = currentButtons.some((p, i) => p && !state.lastGamepadButtons[i]);
+            
+            if (pressedNow) {
+                if (!state.started) {
+                    startGame();
+                } else if (document.getElementById('dialogue').style.display === 'block') {
+                    advanceDialogue();
+                } else if (state.interactable) {
+                    state.interactable.action();
+                }
+            }
+            state.lastGamepadButtons = currentButtons;
+        }
+        requestAnimationFrame(globalGamepadLoop);
     }
 
     const dialogueSequences = {
-        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
-        "Phone": ["I wonder who this belongs too? It's an older cell phone. Early 2000s. The contact page says, Detective Ambrose Smith."],
-        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
+        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon...", "As tempting as it would be, I'm interested in getting out of here."],
+        "Phone": ["I wonder who this belongs too? Detective Ambrose Smith."],
+        "Notepad": ["A notepad?", "I've failed. I only hope whoever finds this notepad can benefit from my observations. - Smith.", "WINTER_FOLLOWUP"],
         "PhoneDead": ["The phone is completely dead. No way to turn it on."],
-        "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
+        "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why was that important?", "SHOCK_MOMENT"],
         "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
         "VaseUnlock": ["Whoa! Using the vase triggered some kind of mechanism!", "The door to the study is open!"]
     };
@@ -206,18 +218,18 @@
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
+            { id: "Back", x: 300, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: (803 * R_W_SCALE_Y) - 50, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() },
+            { id: "Next", x: 1100, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() },
             { id: "VaseHole", x: 1000 * R_W_SCALE_X, y: 700 * R_W_SCALE_Y, action: () => handleVaseUnlock() }
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
-            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Pool balls...") },
-            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
+            { id: "Back", x: 100, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
+            { id: "Balls", x: 900, y: 600, action: () => pickup("Balls", "ItemBalls.png", "Pool balls...") },
+            { id: "Cue", x: 1000, y: 620, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
             { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
-            { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
+            { id: "Flower", x: 800, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
             { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => say("It looks like I'm high in the mountains.") }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
@@ -230,18 +242,18 @@
         if (state.activeItem === "Vase") {
             state.isShocked = true;
             document.getElementById('winter').src = "WinterIdleShock.png";
-            state.lockpicking = true; // Use shared logic for seq trigger
+            state.lockpicking = true; 
             state.activeItem = "VaseUnlock"; 
             state.dialogueStep = 0;
             advanceDialogue();
-        } else say("There's a strange indentation in the wall here. Circular.");
+        } else say("There's a circular indentation in the wall.");
     }
 
     function handleSecretDoor() {
         if (state.gameFinished && state.activeItem === "Mug") {
-            say("The mug fits into the slot! The wall is moving!");
+            say("The mug fits! The wall is moving!");
             setTimeout(() => { changeRoom(1); }, 2000); 
-        } else say("A secret door. It's locked tight.");
+        } else say("A secret door. Locked tight.");
     }
 
     function handleBilliardEntry() {
@@ -268,6 +280,8 @@
             say(seq[state.dialogueStep]);
             if (seqName === "Lockpick" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; }
             if (seqName === "VaseUnlock" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; state.activeItem = "Vase"; }
+            if (seqName === "PhoneClue" && seq[state.dialogueStep] === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
+            if (seqName === "PhoneClue" && seq[state.dialogueStep] === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; state.phoneDead = true; say("Phone's dead now."); }
             state.dialogueStep++;
         } else { d.style.display = 'none'; state.isShocked = false; if (state.room2DoorUnlocked && state.room === 2) changeRoom(3); }
     }
@@ -288,6 +302,7 @@
     function pickup(name, img, msg) {
         state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
         const idx = state.inventory.length - 1; if(idx < 9) document.getElementById('s' + idx).innerHTML = `<img src="${img}">`;
+        if (name === "Books") state.remarkMade = true;
         say(msg);
     }
 
@@ -322,6 +337,7 @@
     function renderScene() {
         const s = scenes[state.room]; document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+        
         const w = document.getElementById('winter');
         w.className = (state.room === 5) ? 'small' : '';
         const kidnapper = document.getElementById('kidnapper');
@@ -332,7 +348,15 @@
             const el = document.getElementById('obj-' + name); if (!el) return;
             const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
             el.style.display = (hs && !state.inventory.includes(name)) ? 'block' : 'none';
-            if (hs) { el.style.left = hs.x + "px"; el.style.top = hs.y + "px"; }
+            if (hs) { 
+                el.style.left = hs.x + "px"; el.style.top = hs.y + "px"; 
+                // Fix Room 1 Layering
+                if (state.room === 1 && state.isDark && name !== "Torch") {
+                    el.style.zIndex = "0"; 
+                } else {
+                    el.style.zIndex = "20";
+                }
+            }
         });
     }
 
@@ -344,12 +368,6 @@
         if (gp) {
             if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
             if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
-            const pressedNow = gp.buttons.some((b, i) => b.pressed && !state.lastGamepadButtons[i]);
-            if (pressedNow) {
-                if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
-                else if (state.interactable) state.interactable.action();
-            }
-            state.lastGamepadButtons = gp.buttons.map(b => b.pressed);
         }
 
         const w = document.getElementById('winter');
@@ -370,7 +388,7 @@
         w.style.top = (state.winterY - (state.room === 5 ? 75 : 120)) + 'px';
     }
 
-    function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I?"); gameLoop(); }
+    function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I? Why is it so dark?"); gameLoop(); }
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
     function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
     function selectItem(idx) {
@@ -379,7 +397,7 @@
         document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
         document.getElementById('s' + idx).classList.add('active-slot');
     }
-    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
+    function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
     function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
 
     window.addEventListener("keydown", e => {
