@@ -15,7 +15,6 @@
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         #winter.small { width: 58px; }
         
-        /* Kidnapper scaled up another 15% (Base ~125 -> 144 -> 165) */
         #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
@@ -151,7 +150,11 @@
     };
 
     const dialogueSequences = {
-        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon...", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
+        "Books": [
+            "Hmm, a book about King Arthur.", 
+            "\"Excalibur, King Arthur's sword, is believed to be hidden in Avalon...\"", 
+            "As tempting as it would be to find a missing relic, I'm interested in getting out of here."
+        ],
         "Phone": ["I wonder who this belongs to? Early 2000s.", "The contact page says, Detective Ambrose Smith."],
         "Notepad": ["A notepad?", "There's a note here, 'I've failed. I can't find the sword...' - Detective Smith.'"]
     };
@@ -296,7 +299,6 @@
                 state.frameTimer = 0;
             }
 
-            // FIXED: Logic now properly cycles between Shock Idle and Shock Walk when walking in Shock states
             if (state.room === 6 || state.isShockedInRoom3) {
                 winter.src = state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png";
             } else {
@@ -317,6 +319,9 @@
         const d = document.getElementById('dialogue');
         const kn = document.getElementById('kidnapper');
         const winter = document.getElementById('winter');
+
+        // Reset styling before checking next step
+        d.style.backgroundColor = "rgba(0,0,0,0.95)";
 
         if (state.cutsceneStep >= 100) {
             const idx = state.cutsceneStep - 100;
@@ -341,7 +346,15 @@
         } else {
             const seq = dialogueSequences[state.activeItem];
             if (seq && state.dialogueStep < seq.length) {
-                say(seq[state.dialogueStep], false);
+                let text = seq[state.dialogueStep];
+                
+                // NEW: Book specific styling logic
+                if (state.activeItem === "Books" && state.dialogueStep === 1) {
+                    d.style.backgroundColor = "#5d4037"; // Leather color
+                    text = "📖 " + text;
+                }
+
+                say(text, false);
                 state.dialogueStep++;
                 if (state.activeItem === "Books" && state.dialogueStep === seq.length) state.remarkMade = true;
             } else { d.style.display = 'none'; }
