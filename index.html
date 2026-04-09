@@ -402,6 +402,10 @@
                 state.winterY = 550;
             }
 
+            // Reset shock state on any room entry to revert graphics/walk sequence
+            state.isShocked = false;
+            document.getElementById('winter').src = "WinterIdle.png";
+
             state.room = id; 
             const currentMus = musicMap[id]; if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
             renderScene(); fade.style.opacity = "0";
@@ -436,7 +440,7 @@
         if (state.keys['_gpY']) dy += state.keys['_gpY'] * 5;
         
         const w = document.getElementById('winter');
-        const showShock = state.isShocked || (state.room === 3 && state.vasePlaced);
+        const showShock = state.isShocked;
 
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
