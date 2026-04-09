@@ -75,3 +75,6 @@ Based on the audio drama Shadows & Daylight more at [shadowsanddaylight.ca](http
 
 Episodic
 Story continues beyond current build.
+
+### Known Bugs
+Several mechanics go haywire if you explore the game after reaching the credits, there is however an Easter Egg to be found if you do explor post-credits, but expect some jank at that point.
