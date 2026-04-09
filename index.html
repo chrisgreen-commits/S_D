@@ -15,7 +15,8 @@
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         #winter.small { width: 58px; }
         
-        #kidnapper { position: absolute; height: 125px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
+        /* Kidnapper base style + 15% increase for Room 5 */
+        #kidnapper { position: absolute; height: 144px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
@@ -41,7 +42,8 @@
             background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
             display: flex; align-items: center; padding: 0 20px; z-index: 10;
         }
-        #investigate-btn { font-size: 40px; cursor: pointer; margin-left: 20px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
+        /* Moved 50px to the left */
+        #investigate-btn { font-size: 40px; cursor: pointer; margin-right: 70px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
         #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
         .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .slot img { width: 50px; height: 50px; }
@@ -112,6 +114,7 @@
 
     <div id="inventory-bar">
         <div style="font-size: 16px; color: #be9b7b; margin-right: 15px;">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
         <div id="slots-container">
             <div class="slot" id="s0" onclick="selectItem(0)"></div>
             <div class="slot" id="s1" onclick="selectItem(1)"></div>
@@ -123,7 +126,6 @@
             <div class="slot" id="s7" onclick="selectItem(7)"></div>
             <div class="slot" id="s8" onclick="selectItem(8)"></div>
         </div>
-        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
     </div>
 </div>
 
@@ -169,7 +171,7 @@
             { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 803 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => changeRoom(3) } 
+            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() } 
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
@@ -187,6 +189,14 @@
             { id: "ExitVoid", x: 1200, y: 550, action: () => changeRoom(1) }
         ]}
     };
+
+    function handleBilliardEntry() {
+        if (state.activeItem === "Card") {
+            changeRoom(3);
+        } else {
+            say("The door is locked. There's a slot for a thin card here.", true);
+        }
+    }
 
     function handleSecretDoor() {
         if (state.inventory.length >= 9 && state.easterEggActive) {
@@ -219,7 +229,6 @@
             const currentMus = musicMap[id];
             if (currentMus) { 
                 currentMus.volume = GLOBAL_VOLUME; 
-                // Skip to 30s in Room 3
                 if(id === 3) currentMus.currentTime = 30;
                 currentMus.play().catch(e => {}); 
             }
@@ -269,14 +278,13 @@
 
     function updateMovement() {
         if (state.cutsceneStep > 0 && state.cutsceneStep < 100) return;
-        let dx = 0, dy = 0, walking = false;
+        let dx = 0, dy = 0;
         if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         
         const winter = document.getElementById('winter');
         
         if (dx !== 0 || dy !== 0) {
-            walking = true;
             const limit = scenes[state.room].wall;
             const bottomLimit = state.room === 5 ? 520 : 680;
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
@@ -299,6 +307,7 @@
         } else {
             state.frameTimer = 0;
             state.walkFrame = 0;
+            // Room 6 stays in shock idle
             winter.src = state.room === 6 ? "WinterIdleShock.png" : "WinterIdle.png";
         }
         if (state.room === 6) updateParticles();
@@ -371,11 +380,17 @@
         let found = null;
         if (scenes[state.room].hotspots) {
             scenes[state.room].hotspots.forEach(hs => {
-                if (hs.id === "Secret" || hs.id === "ExitVoid") {} 
-                else if (["Exit", "Next", "Back", "Back3", "Flower", "Kidnapper", "Window"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
+                if (hs.id === "Secret" || hs.id === "ExitVoid" || hs.id === "Next") {} 
+                else if (["Exit", "Back", "Back3", "Flower", "Kidnapper", "Window"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x); const dy = Math.abs(state.winterY - hs.y);
                 if (dx < 100 && dy < 300) found = hs;
             });
+            // Specific check for room transition door
+            const nextDoor = scenes[state.room].hotspots.find(h => h.id === "Next");
+            if (nextDoor) {
+                const dx = Math.abs(state.winterX - nextDoor.x); const dy = Math.abs(state.winterY - nextDoor.y);
+                if (dx < 100 && dy < 300) found = nextDoor;
+            }
         }
         if (found) {
             state.interactable = found; prompt.style.display = 'block';
