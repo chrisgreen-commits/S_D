@@ -381,7 +381,7 @@
         state.interactable = found;
         if (found) {
             prompt.style.display = 'block'; prompt.style.left = state.winterX + 'px';
-            prompt.style.top = (state.winterY - (state.room === 5 ? 100 : 180)) + 'px';
+            prompt.style.top = (state.winterY - (state.room === 5 ? 75 : 180)) + 'px';
         } else prompt.style.display = 'none';
     }
 
@@ -402,7 +402,6 @@
                 state.winterY = 550;
             }
 
-            // Reset shock state on any room entry to revert graphics/walk sequence
             state.isShocked = false;
             document.getElementById('winter').src = "WinterIdle.png";
 
@@ -420,16 +419,13 @@
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
         const kidnapperEl = document.getElementById('kidnapper');
-        const winterEl = document.getElementById('winter');
         if (state.room === 5) {
             const hs = s.hotspots.find(h => h.id === "Kidnapper");
             kidnapperEl.style.left = hs.x + "px";
             kidnapperEl.style.top = hs.y + "px";
             kidnapperEl.style.display = 'block';
-            winterEl.style.width = (93 * 0.75) + "px";
         } else {
             kidnapperEl.style.display = 'none';
-            winterEl.style.width = "93px";
         }
 
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
@@ -455,6 +451,9 @@
         const w = document.getElementById('winter');
         const showShock = state.isShocked;
 
+        // Apply scale based on room
+        const currentScale = state.room === 5 ? 0.75 : 1;
+
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
             state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
@@ -469,12 +468,20 @@
                 }
                 state.frameTimer = 0;
             }
-            if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
+            if (dx > 0) w.style.transform = `scale(${currentScale}, ${currentScale})`; 
+            else if (dx < 0) w.style.transform = `scale(${-currentScale}, ${currentScale})`;
         } else {
             w.src = showShock ? "WinterIdleShock.png" : "WinterIdle.png";
             state.walkFrame = 0;
+            // Maintain facing direction while idle
+            const isFlipped = w.style.transform.includes("-");
+            w.style.transform = `scale(${isFlipped ? -currentScale : currentScale}, ${currentScale})`;
         }
-        w.style.left = (state.winterX - (w.offsetWidth / 2)) + 'px'; w.style.top = (state.winterY - (w.offsetHeight * 1.29)) + 'px';
+        
+        // Adjust visual offset for 75% scale
+        const heightOffset = state.room === 5 ? 90 : 120;
+        w.style.left = (state.winterX - 46) + 'px'; 
+        w.style.top = (state.winterY - heightOffset) + 'px';
     }
 
     function startGame() {
