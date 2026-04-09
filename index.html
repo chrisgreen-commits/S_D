@@ -313,7 +313,7 @@
             { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back3", x: 192, y: 550 - 25, action: () => changeRoom(3) },
+            { id: "Back3", x: 320, y: 360, action: () => changeRoom(3) },
             { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
@@ -425,8 +425,7 @@
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
                 const rangeX = isTransition ? 100 : 75; 
-                // Fix: Specifically increase range for the Rooftop exit without affecting others
-                const rangeY = (hs.id === "Back3") ? 250 : 150;
+                const rangeY = isTransition ? 150 : 150;
                 if (dx < rangeX && dy < rangeY) found = hs;
             });
         }
