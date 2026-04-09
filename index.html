@@ -425,7 +425,8 @@
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
                 const rangeX = isTransition ? 100 : 75; 
-                const rangeY = isTransition ? 250 : 150;
+                // Fix: Specifically increase range for the Rooftop exit without affecting others
+                const rangeY = (hs.id === "Back3") ? 250 : 150;
                 if (dx < rangeX && dy < rangeY) found = hs;
             });
         }
