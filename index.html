@@ -36,7 +36,16 @@
         }
         #clue-img { width: 300px; border: 15px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated; }
 
-        #winter { position: absolute; width: 93px; z-index: 10; transform-origin: bottom center; pointer-events: none; }
+        /* FIXED: Added initial positioning to prevent top-left float */
+        #winter { 
+            position: absolute; 
+            width: 93px; 
+            z-index: 10; 
+            transform-origin: bottom center; 
+            pointer-events: none;
+            left: 34px; /* (80px - 46px offset) */
+            top: 430px; /* (550px - 120px offset) */
+        }
         #winter.small { width: 58px; }
         #kidnapper { position: absolute; height: 165px; width: auto; z-index: 9; image-rendering: pixelated; display: none; }
 
@@ -55,10 +64,9 @@
         }
         
         .world-obj { position: absolute; image-rendering: pixelated; display: none; }
-        /* Room 1 objects have low z-index by default to hide behind darkened BG */
         #obj-Mug { width: 17.5px; z-index: 5; } #obj-Balls { width: 35px; z-index: 5; } #obj-Phone { width: 20.1px; z-index: 5; } 
         #obj-Notepad { width: 21.8px; z-index: 5; } #obj-Vase { width: 60px; z-index: 5; }
-        #obj-Torch { width: 40px; z-index: 20; } /* Torch is always above the darkness */
+        #obj-Torch { width: 40px; z-index: 20; } 
         #obj-Card { width: 25px; z-index: 5; } #obj-Books { width: 50px; z-index: 5; } #obj-Cue { width: 60px; z-index: 5; }
         
         #inventory-bar { 
@@ -162,7 +170,6 @@
         room2DoorUnlocked: false, lastGamepadButtons: [], gameFinished: false
     };
 
-    // --- Authentication ---
     document.getElementById('password-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             if (e.target.value.toUpperCase() === "DAYLIGHTER26") {
@@ -177,21 +184,15 @@
         }
     });
 
-    // Unified controller checking for the whole lifecycle
     function globalGamepadLoop() {
         const gp = navigator.getGamepads()[0];
         if (gp) {
             const currentButtons = gp.buttons.map(b => b.pressed);
             const pressedNow = currentButtons.some((p, i) => p && !state.lastGamepadButtons[i]);
-            
             if (pressedNow) {
-                if (!state.started) {
-                    startGame();
-                } else if (document.getElementById('dialogue').style.display === 'block') {
-                    advanceDialogue();
-                } else if (state.interactable) {
-                    state.interactable.action();
-                }
+                if (!state.started) startGame();
+                else if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
+                else if (state.interactable) state.interactable.action();
             }
             state.lastGamepadButtons = currentButtons;
         }
@@ -277,11 +278,12 @@
         const seq = dialogueSequences[seqName];
 
         if (seq && state.dialogueStep < seq.length) {
-            say(seq[state.dialogueStep]);
+            if (seq[state.dialogueStep] === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
+            else if (seq[state.dialogueStep] === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; state.phoneDead = true; say("Phone's dead now."); }
+            else say(seq[state.dialogueStep]);
+            
             if (seqName === "Lockpick" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; }
             if (seqName === "VaseUnlock" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; state.activeItem = "Vase"; }
-            if (seqName === "PhoneClue" && seq[state.dialogueStep] === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
-            if (seqName === "PhoneClue" && seq[state.dialogueStep] === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; state.phoneDead = true; say("Phone's dead now."); }
             state.dialogueStep++;
         } else { d.style.display = 'none'; state.isShocked = false; if (state.room2DoorUnlocked && state.room === 2) changeRoom(3); }
     }
@@ -337,7 +339,6 @@
     function renderScene() {
         const s = scenes[state.room]; document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
-        
         const w = document.getElementById('winter');
         w.className = (state.room === 5) ? 'small' : '';
         const kidnapper = document.getElementById('kidnapper');
@@ -350,12 +351,7 @@
             el.style.display = (hs && !state.inventory.includes(name)) ? 'block' : 'none';
             if (hs) { 
                 el.style.left = hs.x + "px"; el.style.top = hs.y + "px"; 
-                // Fix Room 1 Layering
-                if (state.room === 1 && state.isDark && name !== "Torch") {
-                    el.style.zIndex = "0"; 
-                } else {
-                    el.style.zIndex = "20";
-                }
+                el.style.zIndex = (state.room === 1 && state.isDark && name !== "Torch") ? "0" : "20";
             }
         });
     }
@@ -363,13 +359,11 @@
     function updateMovement() {
         if (document.getElementById('dialogue').style.display === 'block') return;
         let dx = 0, dy = 0; if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5; if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
-        
         const gp = navigator.getGamepads()[0];
         if (gp) {
             if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
             if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
         }
-
         const w = document.getElementById('winter');
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
@@ -381,9 +375,7 @@
                 state.frameTimer = 0;
             }
             if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
-        } else {
-            w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
-        }
+        } else { w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png"; }
         w.style.left = (state.winterX - (state.room === 5 ? 29 : 46)) + 'px'; 
         w.style.top = (state.winterY - (state.room === 5 ? 75 : 120)) + 'px';
     }
@@ -406,6 +398,7 @@
         else if (e.code === "KeyE" && state.interactable) state.interactable.action();
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
+    renderScene(); // Initial call to place winter
 </script>
 </body>
 </html>
