@@ -292,8 +292,10 @@
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Secret", x: 192, y: 504, action: () => {
-                if (state.gameCompleted) { say("I've already uncovered everything here."); return; }
-                if (state.activeItem === "Mug") { changeRoom(1); say("The coffee bean power opens the secret door!"); } 
+                if (state.activeItem === "Mug") { 
+                    say("The coffee bean power opens the secret door!"); 
+                    // To proceed, you could changeRoom(4) if you have a secret room asset
+                } 
                 else { say("Hmm, a secret door. It's locked tight. I'll need to find another way."); }
             }},
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
@@ -318,7 +320,10 @@
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 225, y: 557, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { 
+                if(state.gameCompleted) { say("I've given you my offer, Winter. The choice is yours."); return; }
+                state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
+            } }
         ]}
     };
 
@@ -413,13 +418,12 @@
     }
 
     function pickup(name, img, msg, endSequence = false) {
-        if (state.gameCompleted) return;
         state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
         state.activeIdx = state.inventory.length - 1;
         if(state.activeIdx < 9) document.getElementById('s' + state.activeIdx).innerHTML = `<img src="${img}">`;
         selectItem(state.activeIdx);
         say(msg);
-        if (endSequence) state.dialogueStep = 99; // Prevents auto-advancing to lore
+        if (endSequence) state.dialogueStep = 99; 
     }
 
     function checkProximity() {
