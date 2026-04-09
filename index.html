@@ -47,7 +47,8 @@
         #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
         .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .slot img { width: 50px; height: 50px; }
-        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; }
+        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; background: #333; }
+        .selected-nav { border-color: #be9b7b; box-shadow: 0 0 8px #be9b7b; }
         
         #dialogue { 
             position: absolute; top: 30px; width: 84%; left: 8%; 
@@ -72,7 +73,7 @@
     <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room6" loop><source src="Los_Cabos_House_of_the_Gipsies.mp3" type="audio/mpeg"></audio>
     
-    <div id="interact-prompt">PRESS E</div>
+    <div id="interact-prompt">PRESS E / (A)</div>
     
     <div id="title-screen" onclick="startGame()">
         <div class="title-small">SHADOWS & DAYLIGHT</div>
@@ -115,7 +116,7 @@
     <div id="dialogue" onclick="advanceDialogue()"></div>
 
     <div id="inventory-bar">
-        <div style="font-size: 16px; color: #be9b7b; margin-right: 15px;">EQUIPPED: <span id="active-txt" style="color:#fff">NONE</span></div>
+        <div style="font-size: 14px; color: #be9b7b; margin-right: 15px;">EQUIPPED: <br><span id="active-txt" style="color:#fff">NONE</span></div>
         <div id="investigate-btn" onclick="investigateItem()">🔍</div>
         <div id="slots-container">
             <div class="slot" id="s0" onclick="selectItem(0)"></div>
@@ -145,7 +146,9 @@
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, easterEggActive: false,
         particles: [], walkFrame: 0, frameTimer: 0,
-        isShockedInRoom3: false
+        isShockedInRoom3: false, 
+        lastGamepadA: false, lastGamepadX: false, lastGamepadY: false,
+        inventoryFocus: false, selectedSlot: 0, navCooldown: 0
     };
 
     const dialogueSequences = {
@@ -281,9 +284,60 @@
     function updateMovement() {
         if (state.cutsceneStep > 0 && state.cutsceneStep < 100) return;
         let dx = 0, dy = 0;
-        if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
-        if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         
+        const gp = navigator.getGamepads()[0];
+        
+        // --- GAMEPAD LOGIC ---
+        if (gp) {
+            // Toggle Inventory Focus (Y Button)
+            const btnY = gp.buttons[3].pressed;
+            if (btnY && !state.lastGamepadY) {
+                state.inventoryFocus = !state.inventoryFocus;
+                updateSlotHighlights();
+            }
+            state.lastGamepadY = btnY;
+
+            if (state.inventoryFocus) {
+                // Navigate Inventory
+                if (state.navCooldown <= 0) {
+                    if (gp.axes[0] > 0.5) { state.selectedSlot = (state.selectedSlot + 1) % 9; state.navCooldown = 15; }
+                    if (gp.axes[0] < -0.5) { state.selectedSlot = (state.selectedSlot + 8) % 9; state.navCooldown = 15; }
+                    updateSlotHighlights();
+                }
+                // Select Item (A Button)
+                const btnA = gp.buttons[0].pressed;
+                if (btnA && !state.lastGamepadA) {
+                    selectItem(state.selectedSlot);
+                    state.inventoryFocus = false;
+                    updateSlotHighlights();
+                }
+                state.lastGamepadA = btnA;
+            } else {
+                // Normal Movement
+                if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
+                if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
+                
+                const btnA = gp.buttons[0].pressed;
+                if (btnA && !state.lastGamepadA) {
+                    if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
+                    else if (state.interactable) state.interactable.action();
+                }
+                state.lastGamepadA = btnA;
+            }
+
+            const btnX = gp.buttons[2].pressed;
+            if (btnX && !state.lastGamepadX) investigateItem();
+            state.lastGamepadX = btnX;
+        }
+
+        // --- KEYBOARD LOGIC (Backup) ---
+        if (!state.inventoryFocus) {
+            if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
+            if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
+        }
+
+        if (state.navCooldown > 0) state.navCooldown--;
+
         const winter = document.getElementById('winter');
         const isShock = state.room === 6 || state.isShockedInRoom3;
         
@@ -295,22 +349,13 @@
             
             state.frameTimer++;
             if (state.frameTimer > 8) {
-                // Toggles between 0 and 1
                 state.walkFrame = state.walkFrame === 0 ? 1 : 0;
                 state.frameTimer = 0;
             }
-
-            // CLEANER FIX: Explicitly use walking sprites during movement
-            if (isShock) {
-                winter.src = "WinterWalk" + (state.walkFrame + 1) + "_Shock.png";
-            } else {
-                winter.src = "WinterWalk" + (state.walkFrame + 1) + ".png";
-            }
-
+            winter.src = isShock ? "WinterWalk" + (state.walkFrame + 1) + "_Shock.png" : "WinterWalk" + (state.walkFrame + 1) + ".png";
             updateWinterStyle();
             if (dx !== 0) winter.style.transform = `scaleX(${dx < 0 ? -1 : 1})`;
         } else {
-            // IDLE state when no movement input
             state.frameTimer = 0;
             state.walkFrame = 0;
             winter.src = isShock ? "WinterIdleShock.png" : "WinterIdle.png";
@@ -318,13 +363,18 @@
         if (state.room === 6) updateParticles();
     }
 
+    function updateSlotHighlights() {
+        document.querySelectorAll('.slot').forEach((s, idx) => {
+            s.classList.remove('selected-nav');
+            if (state.inventoryFocus && idx === state.selectedSlot) s.classList.add('selected-nav');
+        });
+    }
+
     function advanceDialogue() {
         const d = document.getElementById('dialogue');
         const kn = document.getElementById('kidnapper');
         const winter = document.getElementById('winter');
-
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
-
         if (state.cutsceneStep >= 100) {
             const idx = state.cutsceneStep - 100;
             if (idx < finalSequence.length) {
@@ -337,10 +387,8 @@
                 d.style.display = 'none'; triggerEnd();
             }
         } else if (state.cutsceneStep === 1) {
-            state.cutsceneStep = 2; 
-            state.isShockedInRoom3 = true;
-            winter.src = "WinterIdleShock.png";
-            say("W-What's that noise?", false);
+            state.cutsceneStep = 2; state.isShockedInRoom3 = true;
+            winter.src = "WinterIdleShock.png"; say("W-What's that noise?", false);
         } else if (state.cutsceneStep === 2) {
             state.cutsceneStep = 0; state.vasePlaced = true;
             document.getElementById('bg').src = "Room3_Billiards3.png";
@@ -349,12 +397,9 @@
             const seq = dialogueSequences[state.activeItem];
             if (seq && state.dialogueStep < seq.length) {
                 let text = seq[state.dialogueStep];
-                
                 if (state.activeItem === "Books" && state.dialogueStep === 1) {
-                    d.style.backgroundColor = "#5d4037"; 
-                    text = "📖 " + text;
+                    d.style.backgroundColor = "#5d4037"; text = "📖 " + text;
                 }
-
                 say(text, false);
                 state.dialogueStep++;
                 if (state.activeItem === "Books" && state.dialogueStep === seq.length) state.remarkMade = true;
@@ -444,7 +489,19 @@
     function closeCredits() { document.getElementById('end-screen').style.opacity = "0"; setTimeout(() => { document.getElementById('end-screen').style.display = "none"; }, 1000); }
     function triggerEnd() { state.easterEggActive = true; const screen = document.getElementById('end-screen'); screen.style.display = 'flex'; setTimeout(() => screen.style.opacity = "1", 100); }
 
-    window.addEventListener("keydown", e => state.keys[e.code] = true);
+    window.addEventListener("keydown", e => {
+        state.keys[e.code] = true;
+        if (e.code === "Tab") { 
+            e.preventDefault(); 
+            state.inventoryFocus = !state.inventoryFocus; 
+            updateSlotHighlights(); 
+        }
+        if (state.inventoryFocus) {
+            if (e.code === "ArrowRight") { state.selectedSlot = (state.selectedSlot + 1) % 9; updateSlotHighlights(); }
+            if (e.code === "ArrowLeft") { state.selectedSlot = (state.selectedSlot + 8) % 9; updateSlotHighlights(); }
+            if (e.code === "Enter") { selectItem(state.selectedSlot); state.inventoryFocus = false; updateSlotHighlights(); }
+        }
+    });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
     window.addEventListener("keydown", e => { if(e.code === "KeyE" && state.interactable) state.interactable.action(); });
 </script>
