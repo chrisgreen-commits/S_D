@@ -57,8 +57,14 @@
             background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
             padding: 22px; display: none; z-index: 20; color: white; 
             line-height: 1.4; font-size: 22px; cursor: pointer; 
+            min-height: 100px;
         }
-        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; }
+        #dialogue img { 
+            float: left; width: 80px; height: 80px; 
+            margin-right: 20px; border: 2px solid #be9b7b; 
+            image-rendering: pixelated; background: #111;
+        }
+        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; clear: both; }
 
         .particle { position: absolute; pointer-events: none; z-index: 6; width: 17px; } 
 
@@ -291,7 +297,6 @@
         const dialogueVisible = document.getElementById('dialogue').style.display === 'block';
 
         if (gp) {
-            // Y Button Toggle
             const btnY = gp.buttons[3].pressed;
             if (btnY && !state.lastGamepadY) {
                 state.inventoryFocus = !state.inventoryFocus;
@@ -299,7 +304,6 @@
             }
             state.lastGamepadY = btnY;
 
-            // Global A Button logic
             const btnA = gp.buttons[0].pressed;
             if (btnA && !state.lastGamepadA) {
                 if (dialogueVisible) {
@@ -396,10 +400,12 @@
             const seq = dialogueSequences[state.activeItem];
             if (seq && state.dialogueStep < seq.length) {
                 let text = seq[state.dialogueStep];
+                let specialUI = false;
                 if (state.activeItem === "Books" && state.dialogueStep === 1) {
                     d.style.backgroundColor = "#5d4037"; text = "📖 " + text;
+                    specialUI = true; // Don't show portrait for the book text
                 }
-                say(text, false);
+                say(text, false, specialUI);
                 state.dialogueStep++;
                 if (state.activeItem === "Books" && state.dialogueStep === seq.length) state.remarkMade = true;
             } else { d.style.display = 'none'; }
@@ -424,9 +430,14 @@
         document.getElementById('s' + idx).classList.add('active-slot');
     }
 
-    function say(msg, autoHide) {
+    function say(msg, autoHide, skipPortrait = false) {
         const d = document.getElementById('dialogue');
-        d.innerHTML = msg + (autoHide ? "" : "<span>(Click or press A to continue)</span>");
+        let portrait = "";
+        if (!skipPortrait) {
+            const headImg = state.kidnapperTalking ? "KidnapperHead.png" : "WinterHead.png";
+            portrait = `<img src="${headImg}">`;
+        }
+        d.innerHTML = portrait + msg + (autoHide ? "" : "<span>(Click or press A to continue)</span>");
         d.style.display = 'block';
         if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
     }
@@ -492,22 +503,13 @@
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
         const dialogueVisible = document.getElementById('dialogue').style.display === 'block';
-        
-        if (e.code === "Tab") { 
-            e.preventDefault(); 
-            state.inventoryFocus = !state.inventoryFocus; 
-            updateSlotHighlights(); 
-        }
-
-        if (dialogueVisible && e.code === "Enter") {
-            advanceDialogue();
-        } else if (state.inventoryFocus) {
+        if (e.code === "Tab") { e.preventDefault(); state.inventoryFocus = !state.inventoryFocus; updateSlotHighlights(); }
+        if (dialogueVisible && e.code === "Enter") advanceDialogue();
+        else if (state.inventoryFocus) {
             if (e.code === "ArrowRight") { state.selectedSlot = (state.selectedSlot + 1) % 9; updateSlotHighlights(); }
             if (e.code === "ArrowLeft") { state.selectedSlot = (state.selectedSlot + 8) % 9; updateSlotHighlights(); }
             if (e.code === "Enter") { selectItem(state.selectedSlot); state.inventoryFocus = false; updateSlotHighlights(); }
-        } else if (e.code === "KeyE" && state.interactable) {
-            state.interactable.action();
-        }
+        } else if (e.code === "KeyE" && state.interactable) state.interactable.action();
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
 </script>
