@@ -29,7 +29,7 @@
         }
 
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
+        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; transform: translate(-50%, -100%); }
 
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
@@ -418,7 +418,17 @@
         if (state.room === 3 && state.vasePlaced) bgImg = "Room3_Billiards3.png";
         document.getElementById('bg').src = bgImg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
-        document.getElementById('kidnapper').style.display = (state.room === 5) ? 'block' : 'none';
+        
+        const kidnapperEl = document.getElementById('kidnapper');
+        if (state.room === 5) {
+            const hs = s.hotspots.find(h => h.id === "Kidnapper");
+            kidnapperEl.style.left = hs.x + "px";
+            kidnapperEl.style.top = hs.y + "px";
+            kidnapperEl.style.display = 'block';
+        } else {
+            kidnapperEl.style.display = 'none';
+        }
+
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name); if (!el) return;
             const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
