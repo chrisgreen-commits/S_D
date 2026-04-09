@@ -12,11 +12,11 @@
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
-        /* Character Scaling */
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #winter.small { width: 58px; } /* 25% larger than previous rooftop size */
+        #winter.small { width: 58px; }
         
-        #kidnapper { position: absolute; width: 100px; z-index: 4; image-rendering: pixelated; display: none; }
+        /* Kidnapper scaling: matched height to prevent jitter */
+        #kidnapper { position: absolute; height: 125px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
@@ -141,7 +141,7 @@
         winterX: 80, winterY: 550, started: false, keys: {},
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, easterEggActive: false,
-        particles: []
+        particles: [], walkFrame: 0
     };
 
     const dialogueSequences = {
@@ -179,11 +179,13 @@
             { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() }
         ]},
-        5: { bg: "Room5_Rooftop.png", wall: 400, hotspots: [
+        5: { bg: "Room5_Rooftop.png", wall: 180, hotspots: [ // Moved wall up to allow higher placement
             { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 550, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Kidnapper", x: 1000, y: 180, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
-        6: { bg: "white", wall: 100, hotspots: [] } 
+        6: { bg: "white", wall: 100, hotspots: [
+            { id: "ExitVoid", x: 1200, y: 550, action: () => changeRoom(1) }
+        ]}
     };
 
     function handleSecretDoor() {
@@ -199,25 +201,29 @@
     }
 
     function changeRoom(id, isInitial = false) {
-        const musicMap = { 
-            1: document.getElementById('mus-room1'), 
-            2: document.getElementById('mus-room2'), 
-            3: document.getElementById('mus-room3'), 
-            5: document.getElementById('mus-room5') 
-        };
+        const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5') };
         document.getElementById('game-container').style.opacity = "0";
+        
         setTimeout(() => {
             Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
             const prevRoom = state.room;
             state.room = id;
-            state.winterX = id === 6 ? 640 : (id === 1 ? (isInitial ? 80 : 1100) : (id === 3 && prevRoom === 5 ? 1100 : 80));
+
+            // Immediate position update to prevent ghosting
+            if (id === 6) state.winterX = 100;
+            else if (id === 1) state.winterX = isInitial ? 80 : 1100;
+            else if (id === 3 && prevRoom === 5) state.winterX = 1100;
+            else state.winterX = 80;
             state.winterY = 550;
+
+            const winter = document.getElementById('winter');
+            if (id === 5) winter.classList.add('small'); else winter.classList.remove('small');
+            
+            // Apply coordinates immediately before fade in
+            updateWinterStyle();
             
             const currentMus = musicMap[id];
             if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
-            
-            const winter = document.getElementById('winter');
-            if (id === 5) winter.classList.add('small'); else winter.classList.remove('small');
             
             if (id === 6) initCoffeeHeaven(); else clearParticles();
 
@@ -257,22 +263,42 @@
         });
     }
 
+    function updateWinterStyle() {
+        const winter = document.getElementById('winter');
+        winter.style.left = (state.winterX - (state.room === 5 ? 29 : 46)) + 'px'; 
+        winter.style.top = (state.winterY - (state.room === 5 ? 75 : 120)) + 'px'; 
+    }
+
+    // Shock Animation Loop
+    setInterval(() => {
+        if (state.room === 6) {
+            state.walkFrame = state.walkFrame === 0 ? 1 : 0;
+        }
+    }, 150);
+
     function updateMovement() {
         if (state.cutsceneStep > 0 && state.cutsceneStep < 100) return;
         let dx = 0, dy = 0, walking = false;
         if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
+        
         if (dx !== 0 || dy !== 0) {
             walking = true;
             const limit = scenes[state.room].wall;
-            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
-            state.winterY = Math.max(limit, Math.min(680, state.winterY + dy));
-            const winter = document.getElementById('winter');
+            // Room 5 bottom invisible wall (100px from 720px height)
+            const bottomLimit = state.room === 5 ? 620 : 680;
             
-            winter.src = state.room === 6 ? (walking ? "WinterWalk1_Shock.png" : "WinterIdleShock.png") : (walking ? "WinterWalk1.png" : "WinterIdle.png");
+            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
+            state.winterY = Math.max(limit, Math.min(bottomLimit, state.winterY + dy));
+            
+            const winter = document.getElementById('winter');
+            if (state.room === 6) {
+                winter.src = state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png";
+            } else {
+                winter.src = walking ? "WinterWalk1.png" : "WinterIdle.png";
+            }
 
-            winter.style.left = (state.winterX - (state.room === 5 ? 29 : 46)) + 'px'; 
-            winter.style.top = (state.winterY - (state.room === 5 ? 75 : 120)) + 'px'; 
+            updateWinterStyle();
             if (dx !== 0) winter.style.transform = `scaleX(${dx < 0 ? -1 : 1})`;
         } else {
             document.getElementById('winter').src = state.room === 6 ? "WinterIdleShock.png" : "WinterIdle.png";
@@ -283,7 +309,6 @@
     function advanceDialogue() {
         const d = document.getElementById('dialogue');
         const kn = document.getElementById('kidnapper');
-
         if (state.cutsceneStep >= 100) {
             const idx = state.cutsceneStep - 100;
             if (idx < finalSequence.length) {
@@ -306,14 +331,12 @@
             if (seq && state.dialogueStep < seq.length) {
                 say(seq[state.dialogueStep], false);
                 state.dialogueStep++;
-                // Check if book reading is finished
-                if (state.activeItem === "Books" && state.dialogueStep === seq.length) {
-                    state.remarkMade = true;
-                }
+                if (state.activeItem === "Books" && state.dialogueStep === seq.length) state.remarkMade = true;
             } else { d.style.display = 'none'; }
         }
     }
 
+    // Slow Kidnapper Animation
     setInterval(() => {
         if (state.kidnapperTalking) {
             const kn = document.getElementById('kidnapper');
@@ -351,7 +374,7 @@
         let found = null;
         if (scenes[state.room].hotspots) {
             scenes[state.room].hotspots.forEach(hs => {
-                if (hs.id === "Secret") {} 
+                if (hs.id === "Secret" || hs.id === "ExitVoid") {} 
                 else if (["Exit", "Next", "Back", "Back3", "Flower", "Kidnapper"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x); const dy = Math.abs(state.winterY - hs.y);
                 if (dx < 100 && dy < 300) found = hs;
@@ -377,8 +400,11 @@
         if (state.room !== 6) document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         const kn = document.getElementById('kidnapper');
-        if (state.room === 5) { kn.style.display = 'block'; kn.style.left = '1000px'; kn.style.top = '480px'; } 
-        else kn.style.display = 'none';
+        if (state.room === 5) { 
+            kn.style.display = 'block'; 
+            kn.style.left = '1000px'; 
+            kn.style.top = '180px'; // 300px higher than original 480px
+        } else kn.style.display = 'none';
         
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name);
