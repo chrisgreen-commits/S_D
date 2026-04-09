@@ -313,8 +313,8 @@
             { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back3", x: 320, y: 360, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Back", x: 150, y: 550, action: () => changeRoom(3) },
+            { id: "Kidnapper", x: 1000, y: 395, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
@@ -425,7 +425,7 @@
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
                 const rangeX = isTransition ? 100 : 75; 
-                const rangeY = isTransition ? 150 : 150;
+                const rangeY = isTransition ? 250 : 150;
                 if (dx < rangeX && dy < rangeY) found = hs;
             });
         }
@@ -448,6 +448,10 @@
             } else if (id === 2 && state.room === 1) {
                 state.winterX = 2629 * 0.25 * R_W_SCALE_X;
                 state.winterY = 784 * R_W_SCALE_Y;
+            } else if (id === 3 && state.room === 5) {
+                // Place Winter near the flower/window area when returning from roof
+                state.winterX = (1796-100) * R_W_SCALE_X;
+                state.winterY = 692 * R_W_SCALE_Y;
             } else if (id === 5) {
                 state.winterX = 150;
                 state.winterY = 550 - 125; 
