@@ -42,7 +42,7 @@
         #password-screen {
             position: absolute; width: 100%; height: 100%;
             background: rgba(0,0,0,0.97); z-index: 110;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; padding: 40px; box-sizing: border-box;
         }
         #password-screen input {
@@ -109,19 +109,19 @@
     
     <div id="interact-prompt">PRESS E / (ANY BUTTON)</div>
 
+    <div id="title-screen" onclick="showPasswordScreen()">
+        <div class="title-small">SHADOWS & DAYLIGHT</div>
+        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
+        <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
+        <p style="animation: blink 2s infinite;">CLICK OR PRESS ANY BUTTON TO BEGIN</p>
+    </div>
+
     <div id="password-screen">
         <div class="title-small">SHADOWS & DAYLIGHT</div>
         <div class="main-title" style="font-size:32px;">ENTER PASSWORD</div>
         <input type="password" id="pw-input" maxlength="20" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') checkPassword()">
         <button onclick="checkPassword()">ENTER</button>
         <div id="pw-error"></div>
-    </div>
-
-    <div id="title-screen" onclick="startGame()" style="display:none;">
-        <div class="title-small">SHADOWS & DAYLIGHT</div>
-        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
-        <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK OR PRESS ANY BUTTON TO BEGIN</p>
     </div>
 
     <div id="end-screen" onclick="closeCredits()">
@@ -164,15 +164,21 @@
 <script>
     const CORRECT_PASSWORD = "DAYLIGHTER26";
     let passwordPassed = false;
-    let titleShowing = false;
+    let titleShowing = true;
+
+    function showPasswordScreen() {
+        titleShowing = false;
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('password-screen').style.display = 'flex';
+        document.getElementById('pw-input').focus();
+    }
 
     function checkPassword() {
         const input = document.getElementById('pw-input').value.toUpperCase();
         if (input === CORRECT_PASSWORD) {
             passwordPassed = true;
             document.getElementById('password-screen').style.display = 'none';
-            document.getElementById('title-screen').style.display = 'flex';
-            titleShowing = true;
+            startGame();
         } else {
             document.getElementById('pw-error').innerText = "Incorrect password. Try again.";
             document.getElementById('pw-input').value = '';
@@ -209,10 +215,9 @@
                 const wasPrev = gamepadState.prevButtons[gp.index][i];
 
                 if (pressed && !wasPrev) {
-                    if (!passwordPassed) { } 
-                    else if (titleShowing) { startGame(); } 
+                    if (titleShowing) { showPasswordScreen(); }
+                    else if (!passwordPassed) { } 
                     else if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); }
-                    
                     else if (i === 2) { investigateItem(); }
                     else if (i === 4 || i === 14) { cycleInventory(-1); }
                     else if (i === 5 || i === 15) { cycleInventory(1); }
@@ -451,7 +456,6 @@
         const w = document.getElementById('winter');
         const showShock = state.isShocked;
 
-        // Apply scale based on room
         const currentScale = state.room === 5 ? 0.75 : 1;
 
         if (dx !== 0 || dy !== 0) {
@@ -473,22 +477,17 @@
         } else {
             w.src = showShock ? "WinterIdleShock.png" : "WinterIdle.png";
             state.walkFrame = 0;
-            // Maintain facing direction while idle
             const isFlipped = w.style.transform.includes("-");
             w.style.transform = `scale(${isFlipped ? -currentScale : currentScale}, ${currentScale})`;
         }
         
-        // Adjust visual offset for 75% scale
         const heightOffset = state.room === 5 ? 90 : 120;
         w.style.left = (state.winterX - 46) + 'px'; 
         w.style.top = (state.winterY - heightOffset) + 'px';
     }
 
     function startGame() {
-        if (!passwordPassed) return;
-        titleShowing = false;
         state.started = true;
-        document.getElementById('title-screen').style.display = 'none';
         const w = document.getElementById('winter');
         w.style.bottom = '';
         w.style.top = (state.winterY - 120) + 'px';
@@ -514,9 +513,12 @@
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
+        if (titleShowing && (e.code === "Enter" || e.code === "Space")) {
+            showPasswordScreen();
+            return;
+        }
         if (!passwordPassed) return;
         if (e.code === "Enter" || e.code === "Space") {
-            if (titleShowing) { startGame(); return; }
             if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
         }
         if (e.code === "KeyE" && state.interactable) state.interactable.action();
