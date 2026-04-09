@@ -72,7 +72,6 @@
         }
         #dialogue img { float: left; width: 80px; height: 80px; margin-right: 20px; border: 2px solid #be9b7b; image-rendering: pixelated; background: #111; }
         #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; clear: both; }
-
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
@@ -146,7 +145,8 @@
         winterX: 80, winterY: 550, started: false, keys: {},
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
-        lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0
+        lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
+        room2DoorUnlocked: false
     };
 
     const dialogueSequences = {
@@ -188,7 +188,8 @@
     };
 
     function handleBilliardEntry() {
-        if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
+        if (state.room2DoorUnlocked) { changeRoom(3); }
+        else if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
         else say(Math.random() > 0.5 ? "Hmm, that one's locked." : "I'll need a key or something to open this.");
     }
 
@@ -210,7 +211,7 @@
 
         if (seq && state.dialogueStep < seq.length) {
             let text = seq[state.dialogueStep];
-            if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) state.lockpicking = false; }
+            if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
             else if (state.activeItem === "Notepad") {
                 if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
                 else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
@@ -249,7 +250,7 @@
         let found = null;
         if (scenes[state.room].hotspots) {
             scenes[state.room].hotspots.forEach(hs => {
-                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret", "ExitVoid"].includes(hs.id);
+                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret"].includes(hs.id);
                 if (!isTransition && !["Flower", "Kidnapper", "Window"].includes(hs.id) && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
@@ -301,13 +302,15 @@
             
             state.frameTimer++;
             if (state.frameTimer > 10) {
-                state.walkFrame = state.walkFrame === 1 ? 2 : 1;
-                w.src = `WinterWalk${state.walkFrame}.png`;
+                // Cycle between Idle and Walk1 for the requested movement feel
+                state.walkFrame = state.walkFrame === 0 ? 1 : 0;
+                w.src = state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png";
                 state.frameTimer = 0;
             }
             if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
         } else {
             w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
+            state.walkFrame = 0;
         }
         w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
     }
@@ -324,6 +327,7 @@
     }
     function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
     function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
+    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
