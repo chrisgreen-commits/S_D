@@ -288,7 +288,7 @@
     const scenes = {
         1: { bg: "Room1_Library.png", wall: 216, hotspots: [
             { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
-            { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
+            { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Hmm, a book about King Arthur.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Secret", x: 192, y: 504, action: () => {
@@ -296,13 +296,17 @@
                 if (state.activeItem === "Mug") { changeRoom(1); say("The coffee bean power opens the secret door!"); } 
                 else { say("Hmm, a secret door. It's locked tight. I'll need to find another way."); }
             }},
-            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
+            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
+                if(state.remarkMade) changeRoom(2); 
+                else if(state.activeItem === "Books") { state.dialogueStep = 1; advanceDialogue(); }
+                else say("I feel like I'm missing something important in this room."); 
+            } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
+            { id: "Back", x: 100, y: 550, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 788 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() } 
+            { id: "Next", x: 1150, y: 550, action: () => handleBilliardEntry() } 
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
@@ -364,7 +368,8 @@
                 if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
                 else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. Can't imagine an old castle like this has a lot of electrical outlets. I'll have to keep that in mind for later."); state.phoneDead = true; }
                 else say(text);
-            } else if (state.activeItem === "Books" && state.dialogueStep === 1) { say("📖 " + text, true, null, "#5d4037"); state.remarkMade = true; }
+            } else if (state.activeItem === "Books" && state.dialogueStep === 1) { say("📖 " + text, true, null, "#5d4037"); }
+            else if (state.activeItem === "Books" && state.dialogueStep === 2) { say(text); state.remarkMade = true; }
             else if (text === "TRIGGER_ROOM3_OPEN") {
                 document.getElementById('bg').src = "Room3_Billiards3.png";
                 state.isShocked = true;
@@ -446,8 +451,14 @@
                 state.winterX = 1100;
                 state.winterY = 550;
             } else if (id === 2 && state.room === 1) {
-                state.winterX = 2629 * 0.25 * R_W_SCALE_X;
-                state.winterY = 784 * R_W_SCALE_Y;
+                state.winterX = 150;
+                state.winterY = 550;
+            } else if (id === 2 && state.room === 3) {
+                state.winterX = 1100;
+                state.winterY = 550;
+            } else if (id === 3 && state.room === 2) {
+                state.winterX = 150;
+                state.winterY = 550;
             } else if (id === 5) {
                 state.winterX = 150;
                 state.winterY = 550 - 125; 
