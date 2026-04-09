@@ -34,9 +34,12 @@
         .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
+        /* ITEM SCALING SECTION */
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; width: 70px; }
         #obj-Mug { width: 17.5px; } 
         #obj-Balls { width: 35px; } 
+        #obj-Phone { width: 17.5px; } /* 25% of 70px */
+        #obj-Notepad { width: 17.5px; } /* 25% of 70px */
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
@@ -287,9 +290,7 @@
         
         const gp = navigator.getGamepads()[0];
         
-        // --- GAMEPAD LOGIC ---
         if (gp) {
-            // Toggle Inventory Focus (Y Button)
             const btnY = gp.buttons[3].pressed;
             if (btnY && !state.lastGamepadY) {
                 state.inventoryFocus = !state.inventoryFocus;
@@ -298,13 +299,11 @@
             state.lastGamepadY = btnY;
 
             if (state.inventoryFocus) {
-                // Navigate Inventory
                 if (state.navCooldown <= 0) {
                     if (gp.axes[0] > 0.5) { state.selectedSlot = (state.selectedSlot + 1) % 9; state.navCooldown = 15; }
                     if (gp.axes[0] < -0.5) { state.selectedSlot = (state.selectedSlot + 8) % 9; state.navCooldown = 15; }
                     updateSlotHighlights();
                 }
-                // Select Item (A Button)
                 const btnA = gp.buttons[0].pressed;
                 if (btnA && !state.lastGamepadA) {
                     selectItem(state.selectedSlot);
@@ -313,7 +312,6 @@
                 }
                 state.lastGamepadA = btnA;
             } else {
-                // Normal Movement
                 if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
                 if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
                 
@@ -330,7 +328,6 @@
             state.lastGamepadX = btnX;
         }
 
-        // --- KEYBOARD LOGIC (Backup) ---
         if (!state.inventoryFocus) {
             if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
             if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
@@ -440,7 +437,9 @@
                 if (hs.id === "Secret" || hs.id === "ExitVoid" || hs.id === "Next") {} 
                 else if (["Exit", "Back", "Back3", "Flower", "Kidnapper", "Window"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x); const dy = Math.abs(state.winterY - hs.y);
-                if (dx < 100 && dy < 300) found = hs;
+                // Increased proximity buffer for smaller items
+                const buffer = (hs.id === "Phone" || hs.id === "Notepad") ? 150 : 100;
+                if (dx < buffer && dy < 300) found = hs;
             });
             const nextDoor = scenes[state.room].hotspots.find(h => h.id === "Next");
             if (nextDoor) {
