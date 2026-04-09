@@ -263,7 +263,7 @@
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
             { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
-            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 803 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
+            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 788 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
             { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() } 
         ]},
@@ -373,9 +373,9 @@
                 state.winterX = 1100;
                 state.winterY = 550;
             } else if (id === 2 && state.room === 1) {
-                // Spawns Winter exactly at the Room 2 'Back' door location
+                // Spawns Winter exactly at the Room 2 'Back' door location (Lowered 25px)
                 state.winterX = 2629 * 0.25 * R_W_SCALE_X;
-                state.winterY = 759 * R_W_SCALE_Y;
+                state.winterY = 784 * R_W_SCALE_Y;
             } else {
                 state.winterX = 80;
                 state.winterY = 550;
