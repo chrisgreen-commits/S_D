@@ -29,7 +29,6 @@
         }
 
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #winter.small { width: 58px; }
         #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
@@ -49,11 +48,10 @@
         .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
-        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; width: 70px; }
-        #obj-Mug { width: 17.5px; } 
-        #obj-Balls { width: 35px; } 
-        #obj-Phone { width: 20.1px; } 
-        #obj-Notepad { width: 21.8px; } 
+        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
+        #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
+        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 30px; } #obj-Torch { width: 40px; }
+        #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
@@ -72,11 +70,7 @@
             padding: 22px; display: none; z-index: 20; color: white; 
             line-height: 1.4; font-size: 22px; cursor: pointer; min-height: 100px;
         }
-        #dialogue img { 
-            float: left; width: 80px; height: 80px; 
-            margin-right: 20px; border: 2px solid #be9b7b; 
-            image-rendering: pixelated; background: #111;
-        }
+        #dialogue img { float: left; width: 80px; height: 80px; margin-right: 20px; border: 2px solid #be9b7b; image-rendering: pixelated; background: #111; }
         #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; clear: both; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -92,7 +86,6 @@
     <audio id="mus-room2" loop><source src="Yacoby_Schwartzy.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
-    <audio id="mus-room6" loop><source src="Los_Cabos_House_of_the_Gipsies.mp3" type="audio/mpeg"></audio>
     
     <div id="interact-prompt">PRESS E / (A)</div>
     
@@ -106,11 +99,6 @@
     <div id="end-screen" onclick="closeCredits()">
         <div class="main-title">TO BE CONTINUED...</div>
         <div class="title-small">Written & created by Christopher Green</div>
-        <div style="font-size: 14px; color: #aaa; margin-top: 20px; line-height: 1.6;">
-            Tools: Gemini, Claude, ChatGPT, GitHub and GitHub Copilot<br><br>
-            Copyright 2026<br>
-            <span style="color:#fff; font-style: italic;">(Click anywhere to return to the world)</span>
-        </div>
     </div>
 
     <img id="bg" src="Room1_Library.png">
@@ -158,29 +146,15 @@
         winterX: 80, winterY: 550, started: false, keys: {},
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
-        lockpicking: false, isShocked: false,
-        lastGamepadA: false, frameTimer: 0, walkFrame: 0
+        lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0
     };
 
     const dialogueSequences = {
-        "Books": [
-            "Hmm, a book about King Arthur.", 
-            "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", 
-            "As tempting as it would be to find a missing relic, I'm interested in getting out of here."
-        ],
+        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
         "Phone": ["I wonder who this belongs too? It's an older cell phone. Early 2000s. The contact page says, Detective Ambrose Smith."],
-        "Notepad": [
-            "A notepad?",
-            "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.",
-            "WINTER_FOLLOWUP"
-        ],
+        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
         "PhoneDead": ["The phone is completely dead. No way to turn it on."],
-        "PhoneClue": [
-            "This must be one of the photos he mentioned.",
-            "CLUE_OVERLAY",
-            "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...",
-            "SHOCK_MOMENT"
-        ],
+        "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
         "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"]
     };
 
@@ -190,7 +164,7 @@
             { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-            { id: "Secret", x: 192, y: 504, action: () => handleSecretDoor() },
+            { id: "Secret", x: 192, y: 504, action: () => say("Hmm, a secret door. It's locked tight. I'll need to find another way.") },
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
@@ -210,8 +184,7 @@
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
             { id: "Kidnapper", x: 1000, y: 330, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
-        ]},
-        6: { bg: "white", wall: 100, hotspots: [{ id: "ExitVoid", x: 1200, y: 550, action: () => changeRoom(1) }] }
+        ]}
     };
 
     function handleBilliardEntry() {
@@ -225,12 +198,7 @@
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
 
         if (state.cutsceneStep >= 100) {
-            const finalLines = [
-                { s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." },
-                { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." },
-                { s: "K", t: "So you *are* saying yes then?" },
-                { s: "W", t: "Maybe..." }
-            ];
+            const finalLines = [{ s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
             const idx = state.cutsceneStep - 100;
             if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
             else { d.style.display = 'none'; triggerEnd(); }
@@ -285,7 +253,7 @@
                 if (!isTransition && !["Flower", "Kidnapper", "Window"].includes(hs.id) && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
-                const rangeX = isTransition ? 100 : 75; // Range reduced for items
+                const rangeX = isTransition ? 100 : 75; 
                 const rangeY = isTransition ? 250 : 150;
                 if (dx < rangeX && dy < rangeY) found = hs;
             });
@@ -300,10 +268,9 @@
     function changeRoom(id, isInitial = false) {
         const fade = document.getElementById('fade-overlay'); fade.style.opacity = "1";
         setTimeout(() => {
-            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5'), 6: document.getElementById('mus-room6') };
+            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5') };
             Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
-            const prevRoom = state.room; state.room = id;
-            state.winterX = (id === 1 && !isInitial) ? 1100 : 80; state.winterY = 550;
+            state.room = id; state.winterX = (id === 1 && !isInitial) ? 1100 : 80; state.winterY = 550;
             const currentMus = musicMap[id]; if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
             renderScene(); fade.style.opacity = "0";
         }, 500);
@@ -326,30 +293,28 @@
     function updateMovement() {
         if (document.getElementById('dialogue').style.display === 'block') return;
         let dx = 0, dy = 0; if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5; if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
-        const gp = navigator.getGamepads()[0];
-        if (gp) { if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5; if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5; }
+        
+        const w = document.getElementById('winter');
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
             state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
-            updateWinterPos();
+            
+            state.frameTimer++;
+            if (state.frameTimer > 10) {
+                state.walkFrame = state.walkFrame === 1 ? 2 : 1;
+                w.src = `WinterWalk${state.walkFrame}.png`;
+                state.frameTimer = 0;
+            }
+            if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
+        } else {
+            w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
         }
-    }
-
-    function updateWinterPos() {
-        const w = document.getElementById('winter'); w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
+        w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
     }
 
     function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I? Why is it so dark? I better find some light."); gameLoop(); }
-    function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); checkGamepad(); requestAnimationFrame(gameLoop); }
-    function checkGamepad() {
-        const gp = navigator.getGamepads()[0]; if (!gp) return;
-        const btnA = gp.buttons[0].pressed;
-        if (btnA && !state.lastGamepadA) {
-            if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
-            else if (state.interactable) state.interactable.action();
-        }
-        state.lastGamepadA = btnA;
-    }
+    function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
+    
     function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
     function selectItem(idx) {
         if (!state.inventory[idx]) return; state.activeItem = state.inventory[idx];
@@ -359,7 +324,6 @@
     }
     function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
     function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
-    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
