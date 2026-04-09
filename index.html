@@ -27,10 +27,10 @@
             position: absolute; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.9); z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; transition: opacity 1s;
+            text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
         }
         #end-screen { display: none; opacity: 0; }
-        .title-small { font-size: 24px; letter-spacing: 5px; color: #be9b7b; margin: 0; user-select: none; }
+        .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; width: 70px; }
@@ -54,6 +54,8 @@
         }
         #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .credits-list { font-size: 14px; color: #aaa; margin-top: 20px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -75,8 +77,16 @@
 
     <div id="end-screen">
         <div class="main-title">TO BE CONTINUED...</div>
-        <div class="title-small" style="margin-top: 20px;">Written & created by Christopher Green</div>
-        <div class="title-small" style="font-size: 14px; color: #888;">Copyright 2026</div>
+        <div class="title-small">Written & created by Christopher Green</div>
+        <div class="credits-list">
+            Tools: Gemini, Claude, ChatGPT, GitHub and GitHub Copilot<br><br>
+            Music:<br>
+            Dungeon - "Dark Elves" by Jimena Contreras<br>
+            Hallway - "Yacoby" by Schwartzy<br>
+            Billiard Room - "Never Dont Stop" by Schwartzy<br>
+            Roof - "Taking Chances" by The Soundings<br><br>
+            Copyright 2026
+        </div>
     </div>
 
     <img id="bg" src="Room1_Library.png">
@@ -146,23 +156,18 @@
             { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
             { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
-            { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
             { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
-            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 803 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
-            { id: "Phone", x: 369 * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
             { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => changeRoom(3) } 
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
-            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Found some billiard balls.") },
-            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
-            { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 400, hotspots: [
+            { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
             { id: "Kidnapper", x: 1000, y: 550, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
@@ -248,31 +253,28 @@
         document.getElementById('game-container').style.opacity = "0";
 
         setTimeout(() => {
-            // Stop ALL music before starting new room track
-            Object.values(musicMap).forEach(m => {
-                if (m) {
-                    m.pause();
-                    m.currentTime = 0;
-                }
-            });
+            Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
 
+            const prevRoom = state.room;
             state.room = id;
             
+            // Positioning Logic with Snap
             if (id === 1) state.winterX = isInitial ? 80 : 1100;
+            else if (id === 3 && prevRoom === 5) state.winterX = 1100; 
             else state.winterX = 80;
             
             state.winterY = 550;
 
-            // Start new room music
             const currentMus = musicMap[id];
-            if (currentMus) {
-                currentMus.volume = GLOBAL_VOLUME;
-                currentMus.play();
-            }
+            if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play(); }
 
             const winter = document.getElementById('winter');
             if (id === 5) winter.classList.add('small');
             else winter.classList.remove('small');
+            
+            // Update sprites/location immediately before fade-in
+            winter.style.left = (state.winterX - (state.room === 5 ? 23 : 46)) + 'px'; 
+            winter.style.top = (state.winterY - (state.room === 5 ? 60 : 120)) + 'px';
             
             renderScene();
             document.getElementById('game-container').style.opacity = "1";
@@ -306,7 +308,7 @@
         const prompt = document.getElementById('interact-prompt');
         let found = null;
         scenes[state.room].hotspots.forEach(hs => {
-            if (["Exit", "Next", "Back", "Flower", "Kidnapper"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
+            if (["Exit", "Next", "Back", "Back3", "Flower", "Kidnapper"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
             const dx = Math.abs(state.winterX - hs.x);
             const dy = Math.abs(state.winterY - hs.y);
             if (dx < 100 && dy < 300) found = hs;
