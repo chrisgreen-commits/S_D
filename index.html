@@ -249,7 +249,8 @@
         "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
         "PhoneDead": ["The phone is completely dead. No way to turn it on."],
         "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
-        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"]
+        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
+        "Window": ["Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though."]
     };
 
     const scenes = {
@@ -273,7 +274,7 @@
             { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
             { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
-            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.") }
+            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
