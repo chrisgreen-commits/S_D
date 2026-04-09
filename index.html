@@ -12,6 +12,18 @@
         }
         #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
         
+        /* Password Screen */
+        #password-screen {
+            position: absolute; width: 100%; height: 100%; 
+            background: #000; z-index: 200;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #password-input {
+            background: #111; border: 2px solid #be9b7b; color: #fff;
+            padding: 10px; font-size: 24px; font-family: 'Courier New';
+            text-align: center; margin-top: 20px; outline: none;
+        }
+
         #fade-overlay {
             position: absolute; width: 100%; height: 100%;
             background: black; z-index: 90; pointer-events: none;
@@ -23,10 +35,7 @@
             background: rgba(0,0,0,0.8); z-index: 80;
             display: none; justify-content: center; align-items: center;
         }
-        #clue-img { 
-            width: 300px; border: 15px solid #fff; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated;
-        }
+        #clue-img { width: 300px; border: 15px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated; }
 
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
@@ -41,10 +50,10 @@
         #title-screen, #end-screen {
             position: absolute; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.9); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
         }
-        #end-screen { display: none; opacity: 0; }
+        #end-screen { opacity: 0; }
         .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
@@ -78,6 +87,11 @@
 <body>
 
 <div id="game-container">
+    <div id="password-screen">
+        <div class="title-small">ENTER ACCESS KEY</div>
+        <input type="password" id="password-input" autofocus>
+    </div>
+
     <div id="fade-overlay"></div>
     <div id="clue-overlay" onclick="closeClue()"><img id="clue-img" src="ItemCard.png"></div>
 
@@ -86,13 +100,13 @@
     <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
     
-    <div id="interact-prompt">PRESS E / (A)</div>
+    <div id="interact-prompt">PRESS E / (ANY BUTTON)</div>
     
     <div id="title-screen" onclick="startGame()">
         <div class="title-small">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK TO BEGIN</p>
+        <p style="animation: blink 2s infinite;">CLICK OR PRESS (A) TO BEGIN</p>
     </div>
 
     <div id="end-screen" onclick="closeCredits()">
@@ -140,14 +154,40 @@
     const R_W_SCALE_Y = 720 / 1479;
 
     const state = {
+        authenticated: false,
         room: 1, inventory: [], activeItem: null,
         isDark: true, dialogueStep: 0, remarkMade: false,
         winterX: 80, winterY: 550, started: false, keys: {},
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
-        room2DoorUnlocked: false
+        room2DoorUnlocked: false, lastGamepadButtons: []
     };
+
+    // --- Authentication ---
+    document.getElementById('password-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            if (e.target.value.toUpperCase() === "DAYLIGHTER26") {
+                state.authenticated = true;
+                document.getElementById('password-screen').style.display = 'none';
+                document.getElementById('title-screen').style.display = 'flex';
+                requestAnimationFrame(authLoop); // Start checking for controller start
+            } else {
+                alert("ACCESS DENIED");
+                e.target.value = "";
+            }
+        }
+    });
+
+    function authLoop() {
+        if (state.started) return;
+        const gp = navigator.getGamepads()[0];
+        if (gp) {
+            const anyPressed = gp.buttons.some(b => b.pressed);
+            if (anyPressed) startGame();
+        }
+        if (!state.started) requestAnimationFrame(authLoop);
+    }
 
     const dialogueSequences = {
         "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
@@ -229,7 +269,7 @@
         const d = document.getElementById('dialogue');
         if (bgOverride) d.style.backgroundColor = bgOverride;
         let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
-        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press A to continue)</span>`;
+        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press any button to continue)</span>`;
         d.style.display = 'block';
     }
 
@@ -295,6 +335,22 @@
         if (document.getElementById('dialogue').style.display === 'block') return;
         let dx = 0, dy = 0; if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5; if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         
+        // Gamepad Movement
+        const gp = navigator.getGamepads()[0];
+        if (gp) {
+            if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
+            if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
+            
+            // Controller Dialogue/Interact Check (Any button)
+            const currentButtons = gp.buttons.map(b => b.pressed);
+            const pressedNow = currentButtons.some((p, i) => p && !state.lastGamepadButtons[i]);
+            if (pressedNow) {
+                if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
+                else if (state.interactable) state.interactable.action();
+            }
+            state.lastGamepadButtons = currentButtons;
+        }
+
         const w = document.getElementById('winter');
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
@@ -302,7 +358,6 @@
             
             state.frameTimer++;
             if (state.frameTimer > 10) {
-                // Cycle between Idle and Walk1 for the requested movement feel
                 state.walkFrame = state.walkFrame === 0 ? 1 : 0;
                 w.src = state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png";
                 state.frameTimer = 0;
@@ -315,7 +370,15 @@
         w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
     }
 
-    function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I? Why is it so dark? I better find some light."); gameLoop(); }
+    function startGame() { 
+        if(state.started) return;
+        state.started = true; 
+        document.getElementById('title-screen').style.display = 'none'; 
+        changeRoom(1, true); 
+        say("Where am I? Why is it so dark? I better find some light."); 
+        gameLoop(); 
+    }
+    
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
     
     function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
@@ -331,7 +394,7 @@
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
-        if (e.code === "Enter" && document.getElementById('dialogue').style.display === 'block') advanceDialogue();
+        if ((e.code === "Enter" || e.code === "Space") && document.getElementById('dialogue').style.display === 'block') advanceDialogue();
         else if (e.code === "KeyE" && state.interactable) state.interactable.action();
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
