@@ -1,13 +1,3 @@
-That is a classic adventure game secret! To make this work, we need a few specific checks:
-
-1.  **Inventory Check:** Count if all 9 items are collected.
-2.  **Progress Check:** Ensure the player has at least triggered the `end-screen` once (setting a "game cleared" flag).
-3.  **The "Long Trek" Check:** The player must then physically walk all the way back to Room 1.
-4.  **The Secret Hotspot:** Only rendered when those conditions are met.
-
-I’ve added an `easterEggActive` flag that trips when the credits roll, and placed the new hotspot at your exact coordinates ($1280 \times 0.15 = 192$ for X, and $720 \times 0.70 = 504$ for Y).
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -402,4 +392,3 @@ I’ve added an `easterEggActive` flag that trips when the credits roll, and pla
 </script>
 </body>
 </html>
-```
