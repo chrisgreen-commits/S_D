@@ -110,13 +110,13 @@
     <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
     <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
     
-    <div id="interact-prompt">PRESS E / (ANY BUTTON)</div>
+    <div id="interact-prompt">PRESS E / (A)</div>
 
     <div id="title-screen" onclick="showPasswordScreen()">
         <div class="title-small">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK OR PRESS ANY BUTTON TO BEGIN</p>
+        <p style="animation: blink 2s infinite;">CLICK OR PRESS START TO BEGIN</p>
     </div>
 
     <div id="password-screen">
@@ -239,13 +239,13 @@
 
                 if (pressed && !wasPrev) {
                     if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); }
-                    else if (titleShowing) { showPasswordScreen(); }
+                    else if (titleShowing) { if(i === 9) showPasswordScreen(); }
                     else if (!passwordPassed) { } 
-                    else if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); }
+                    else if (document.getElementById('dialogue').style.display === 'block') { if(i === 3) advanceDialogue(); }
                     else if (i === 2) { investigateItem(); }
                     else if (i === 4 || i === 14) { cycleInventory(-1); }
                     else if (i === 5 || i === 15) { cycleInventory(1); }
-                    else if (state.interactable) { state.interactable.action(); }
+                    else if (i === 0) { if (state.interactable) state.interactable.action(); }
                 }
                 gamepadState.prevButtons[gp.index][i] = pressed;
             }
@@ -313,8 +313,8 @@
             { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back", x: 150, y: 550, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 395, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Back3", x: 225, y: 557, action: () => changeRoom(3) },
+            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
@@ -385,12 +385,12 @@
         const d = document.getElementById('dialogue');
         if (bgOverride) d.style.backgroundColor = bgOverride;
         let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
-        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press any button to continue)</span>`;
+        d.innerHTML = `<img src="${img}">${msg}<span>(Space / Y to continue)</span>`;
         d.style.display = 'block';
     }
 
     function handleFlower() {
-        if (state.gameCompleted) return;
+        if (state.gameCompleted) { changeRoom(5); return; }
         if (state.vasePlaced) changeRoom(5); 
         else if (state.activeItem === "Vase") { 
             document.getElementById('bg').src = "Room3_Billiards2.png"; 
@@ -415,7 +415,7 @@
     }
 
     function checkProximity() {
-        if (state.gameCompleted && state.room !== 1) return;
+        if (state.gameCompleted && state.room !== 5 && state.room !== 3) return;
         const prompt = document.getElementById('interact-prompt');
         let found = null;
         if (scenes[state.room].hotspots) {
@@ -448,10 +448,6 @@
             } else if (id === 2 && state.room === 1) {
                 state.winterX = 2629 * 0.25 * R_W_SCALE_X;
                 state.winterY = 784 * R_W_SCALE_Y;
-            } else if (id === 3 && state.room === 5) {
-                // Place Winter near the flower/window area when returning from roof
-                state.winterX = (1796-100) * R_W_SCALE_X;
-                state.winterY = 692 * R_W_SCALE_Y;
             } else if (id === 5) {
                 state.winterX = 150;
                 state.winterY = 550 - 125; 
@@ -587,10 +583,12 @@
             return;
         }
         if (!passwordPassed) return;
-        if (e.code === "Enter" || e.code === "Space") {
+        if (e.code === "Space") {
             if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
         }
-        if (e.code === "KeyE" && state.interactable) state.interactable.action();
+        if (e.code === "KeyE") {
+            if (state.interactable) state.interactable.action();
+        }
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
 </script>
