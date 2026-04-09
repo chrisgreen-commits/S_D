@@ -220,7 +220,8 @@
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
         room2DoorUnlocked: false,
-        coffeeBeans: 0, playerLives: 1
+        coffeeBeans: 0, playerLives: 1,
+        gameCompleted: false
     };
 
     const gamepadState = { prevButtons: {} };
@@ -290,7 +291,11 @@
             { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-            { id: "Secret", x: 192, y: 504, action: () => say("Hmm, a secret door. It's locked tight. I'll need to find another way.") },
+            { id: "Secret", x: 192, y: 504, action: () => {
+                if (state.gameCompleted) { say("I've already uncovered everything here."); return; }
+                if (state.activeItem === "Mug") { changeRoom(1); say("The coffee bean power opens the secret door!"); } 
+                else { say("Hmm, a secret door. It's locked tight. I'll need to find another way."); }
+            }},
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
@@ -309,17 +314,19 @@
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 192, y: 550 - 25, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
     function handleBilliardEntry() {
+        if (state.gameCompleted) return;
         if (state.room2DoorUnlocked) { changeRoom(3); }
         else if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
         else say(Math.random() > 0.5 ? "Hmm, that one's locked." : "I'll need a key or something to open this.");
     }
 
     function advanceDialogue() {
+        if (state.gameCompleted && state.cutsceneStep < 100) { document.getElementById('dialogue').style.display = 'none'; return; }
         const d = document.getElementById('dialogue');
         const winter = document.getElementById('winter');
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
@@ -383,6 +390,7 @@
     }
 
     function handleFlower() {
+        if (state.gameCompleted) return;
         if (state.vasePlaced) changeRoom(5); 
         else if (state.activeItem === "Vase") { 
             document.getElementById('bg').src = "Room3_Billiards2.png"; 
@@ -398,6 +406,7 @@
     }
 
     function pickup(name, img, msg) {
+        if (state.gameCompleted) return;
         state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
         state.activeIdx = state.inventory.length - 1;
         if(state.activeIdx < 9) document.getElementById('s' + state.activeIdx).innerHTML = `<img src="${img}">`;
@@ -406,6 +415,7 @@
     }
 
     function checkProximity() {
+        if (state.gameCompleted && state.room !== 1) return;
         const prompt = document.getElementById('interact-prompt');
         let found = null;
         if (scenes[state.room].hotspots) {
@@ -440,7 +450,7 @@
                 state.winterY = 784 * R_W_SCALE_Y;
             } else if (id === 5) {
                 state.winterX = 150;
-                state.winterY = 550 - 125; // 100px higher spawn + 25px room adjustment
+                state.winterY = 550 - 125; 
             } else {
                 state.winterX = 80;
                 state.winterY = 550;
@@ -525,7 +535,15 @@
         w.style.top = (state.winterY - heightOffset) + 'px';
     }
 
+    function resetGameState() {
+        state.gameCompleted = false;
+        state.cutsceneStep = 0;
+        state.dialogueStep = 0;
+        state.kidnapperTalking = false;
+    }
+
     function startGame() {
+        resetGameState();
         state.started = true;
         const w = document.getElementById('winter');
         w.style.bottom = '';
@@ -537,7 +555,7 @@
     }
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
     
-    function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
+    function investigateItem() { if(state.gameCompleted) return; state.dialogueStep = 0; advanceDialogue(); }
     function selectItem(idx) {
         if (!state.inventory[idx]) return; 
         state.activeIdx = idx;
@@ -547,7 +565,11 @@
         document.getElementById('s' + idx).classList.add('active-slot');
     }
     function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
-    function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
+    function triggerEnd() {
+        state.gameCompleted = true;
+        document.getElementById('end-screen').style.display = 'flex';
+        setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100);
+    }
     function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
 
     window.addEventListener("keydown", e => {
