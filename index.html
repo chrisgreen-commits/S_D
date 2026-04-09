@@ -38,6 +38,7 @@
         #clue-img { width: 300px; border: 15px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated; }
 
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
+        #winter.small { width: 58px; }
         #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; }
 
         #interact-prompt {
@@ -59,8 +60,8 @@
         
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
         #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
-        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 30px; } #obj-Torch { width: 40px; }
-        #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
+        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 60px; } /* Doubled size */
+        #obj-Torch { width: 40px; } #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
@@ -106,7 +107,7 @@
         <div class="title-small">SHADOWS & DAYLIGHT</div>
         <div class="main-title">LABYRINTH OF EXCALIBUR</div>
         <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
-        <p style="animation: blink 2s infinite;">CLICK OR PRESS (A) TO BEGIN</p>
+        <p style="animation: blink 2s infinite;">CLICK OR PRESS ANY BUTTON TO BEGIN</p>
     </div>
 
     <div id="end-screen" onclick="closeCredits()">
@@ -154,14 +155,13 @@
     const R_W_SCALE_Y = 720 / 1479;
 
     const state = {
-        authenticated: false,
-        room: 1, inventory: [], activeItem: null,
+        authenticated: false, room: 1, inventory: [], activeItem: null,
         isDark: true, dialogueStep: 0, remarkMade: false,
         winterX: 80, winterY: 550, started: false, keys: {},
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
-        room2DoorUnlocked: false, lastGamepadButtons: []
+        room2DoorUnlocked: false, lastGamepadButtons: [], gameFinished: false
     };
 
     // --- Authentication ---
@@ -171,7 +171,7 @@
                 state.authenticated = true;
                 document.getElementById('password-screen').style.display = 'none';
                 document.getElementById('title-screen').style.display = 'flex';
-                requestAnimationFrame(authLoop); // Start checking for controller start
+                requestAnimationFrame(authLoop);
             } else {
                 alert("ACCESS DENIED");
                 e.target.value = "";
@@ -182,10 +182,7 @@
     function authLoop() {
         if (state.started) return;
         const gp = navigator.getGamepads()[0];
-        if (gp) {
-            const anyPressed = gp.buttons.some(b => b.pressed);
-            if (anyPressed) startGame();
-        }
+        if (gp && gp.buttons.some(b => b.pressed)) startGame();
         if (!state.started) requestAnimationFrame(authLoop);
     }
 
@@ -195,7 +192,8 @@
         "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
         "PhoneDead": ["The phone is completely dead. No way to turn it on."],
         "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
-        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"]
+        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
+        "VaseUnlock": ["Whoa! Using the vase triggered some kind of mechanism!", "The door to the study is open!"]
     };
 
     const scenes = {
@@ -204,22 +202,23 @@
             { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Found some old books.") },
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
-            { id: "Secret", x: 192, y: 504, action: () => say("Hmm, a secret door. It's locked tight. I'll need to find another way.") },
+            { id: "Secret", x: 192, y: 504, action: () => handleSecretDoor() },
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
             { id: "Back", x: 2629 * 0.25 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: (803 * R_W_SCALE_Y) - 50, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
-            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() } 
+            { id: "Next", x: (2450-100) * R_W_SCALE_X, y: 600 * R_W_SCALE_Y, action: () => handleBilliardEntry() },
+            { id: "VaseHole", x: 1000 * R_W_SCALE_X, y: 700 * R_W_SCALE_Y, action: () => handleVaseUnlock() }
         ]},
         3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
             { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
-            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Pool balls...") },
             { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
             { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
             { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
-            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => say("Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though.") }
+            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => say("It looks like I'm high in the mountains.") }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
@@ -227,56 +226,63 @@
         ]}
     };
 
+    function handleVaseUnlock() {
+        if (state.activeItem === "Vase") {
+            state.isShocked = true;
+            document.getElementById('winter').src = "WinterIdleShock.png";
+            state.lockpicking = true; // Use shared logic for seq trigger
+            state.activeItem = "VaseUnlock"; 
+            state.dialogueStep = 0;
+            advanceDialogue();
+        } else say("There's a strange indentation in the wall here. Circular.");
+    }
+
+    function handleSecretDoor() {
+        if (state.gameFinished && state.activeItem === "Mug") {
+            say("The mug fits into the slot! The wall is moving!");
+            setTimeout(() => { changeRoom(1); }, 2000); 
+        } else say("A secret door. It's locked tight.");
+    }
+
     function handleBilliardEntry() {
-        if (state.room2DoorUnlocked) { changeRoom(3); }
+        if (state.room2DoorUnlocked) changeRoom(3);
         else if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
-        else say(Math.random() > 0.5 ? "Hmm, that one's locked." : "I'll need a key or something to open this.");
+        else say("Locked. I'll need a key or something.");
     }
 
     function advanceDialogue() {
         const d = document.getElementById('dialogue');
         const winter = document.getElementById('winter');
-        d.style.backgroundColor = "rgba(0,0,0,0.95)";
-
         if (state.cutsceneStep >= 100) {
-            const finalLines = [{ s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
+            const finalLines = [{ s: "K", t: "Well well Winter O'Brien..." }, { s: "W", t: "I don't approve of your methods..." }, { s: "K", t: "So you *are* saying yes?" }, { s: "W", t: "Maybe..." }];
             const idx = state.cutsceneStep - 100;
             if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
-            else { d.style.display = 'none'; triggerEnd(); }
+            else { d.style.display = 'none'; state.gameFinished = true; triggerEnd(); }
             return;
         }
 
-        const seqName = state.lockpicking ? "Lockpick" : (state.activeItem === "Phone" && state.phoneDead) ? "PhoneDead" : (state.activeItem === "Phone" && state.notepadRead) ? "PhoneClue" : state.activeItem;
+        const seqName = state.activeItem === "VaseUnlock" ? "VaseUnlock" : state.lockpicking ? "Lockpick" : (state.activeItem === "Phone" && state.phoneDead) ? "PhoneDead" : (state.activeItem === "Phone" && state.notepadRead) ? "PhoneClue" : state.activeItem;
         const seq = dialogueSequences[seqName];
 
         if (seq && state.dialogueStep < seq.length) {
-            let text = seq[state.dialogueStep];
-            if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
-            else if (state.activeItem === "Notepad") {
-                if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
-                else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
-            } else if (seqName === "PhoneClue") {
-                if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
-                else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. Can't imagine an old castle like this has a lot of electrical outlets. I'll have to keep that in mind for later."); state.phoneDead = true; }
-                else say(text);
-            } else if (state.activeItem === "Books" && state.dialogueStep === 1) { say("📖 " + text, true, null, "#5d4037"); state.remarkMade = true; }
-            else say(text);
+            say(seq[state.dialogueStep]);
+            if (seqName === "Lockpick" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; }
+            if (seqName === "VaseUnlock" && state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; state.activeItem = "Vase"; }
             state.dialogueStep++;
-        } else { d.style.display = 'none'; state.isShocked = false; if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); }
+        } else { d.style.display = 'none'; state.isShocked = false; if (state.room2DoorUnlocked && state.room === 2) changeRoom(3); }
     }
 
-    function say(msg, skipPortrait = false, portraitOverride = null, bgOverride = null) {
+    function say(msg) {
         const d = document.getElementById('dialogue');
-        if (bgOverride) d.style.backgroundColor = bgOverride;
-        let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
-        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press any button to continue)</span>`;
+        let img = state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png';
+        d.innerHTML = `<img src="${img}">${msg}<span>(Click or press any button)</span>`;
         d.style.display = 'block';
     }
 
     function handleFlower() {
         if (state.vasePlaced) changeRoom(5); 
         else if (state.activeItem === "Vase") { document.getElementById('bg').src = "Room3_Billiards2.png"; say("Much better!"); state.vasePlaced = true; } 
-        else say("Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in.");
+        else say("If only I had a vase...");
     }
 
     function pickup(name, img, msg) {
@@ -290,20 +296,16 @@
         let found = null;
         if (scenes[state.room].hotspots) {
             scenes[state.room].hotspots.forEach(hs => {
-                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret"].includes(hs.id);
-                if (!isTransition && !["Flower", "Kidnapper", "Window"].includes(hs.id) && state.inventory.includes(hs.id)) return;
+                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret", "VaseHole"].includes(hs.id);
+                if (!isTransition && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x);
                 const dy = Math.abs(state.winterY - hs.y);
-                const rangeX = isTransition ? 100 : 75; 
-                const rangeY = isTransition ? 250 : 150;
-                if (dx < rangeX && dy < rangeY) found = hs;
+                if (dx < (isTransition ? 100 : 75) && dy < (isTransition ? 250 : 150)) found = hs;
             });
         }
         state.interactable = found;
-        if (found) {
-            prompt.style.display = 'block'; prompt.style.left = state.winterX + 'px';
-            prompt.style.top = (state.winterY - (state.room === 5 ? 100 : 180)) + 'px';
-        } else prompt.style.display = 'none';
+        prompt.style.display = found ? 'block' : 'none';
+        if (found) { prompt.style.left = state.winterX + 'px'; prompt.style.top = (state.winterY - (state.room === 5 ? 100 : 180)) + 'px'; }
     }
 
     function changeRoom(id, isInitial = false) {
@@ -320,14 +322,17 @@
     function renderScene() {
         const s = scenes[state.room]; document.getElementById('bg').src = s.bg;
         document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
-        document.getElementById('kidnapper').style.display = (state.room === 5) ? 'block' : 'none';
+        const w = document.getElementById('winter');
+        w.className = (state.room === 5) ? 'small' : '';
+        const kidnapper = document.getElementById('kidnapper');
+        kidnapper.style.display = (state.room === 5) ? 'block' : 'none';
+        kidnapper.style.left = "1000px"; kidnapper.style.top = "330px";
+
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name); if (!el) return;
             const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
-            if (hs && !state.inventory.includes(name)) {
-                el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
-                el.style.display = (state.room === 1 && state.isDark && name !== "Torch") ? 'none' : 'block';
-            } else el.style.display = 'none';
+            el.style.display = (hs && !state.inventory.includes(name)) ? 'block' : 'none';
+            if (hs) { el.style.left = hs.x + "px"; el.style.top = hs.y + "px"; }
         });
     }
 
@@ -335,27 +340,22 @@
         if (document.getElementById('dialogue').style.display === 'block') return;
         let dx = 0, dy = 0; if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5; if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         
-        // Gamepad Movement
         const gp = navigator.getGamepads()[0];
         if (gp) {
             if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
             if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
-            
-            // Controller Dialogue/Interact Check (Any button)
-            const currentButtons = gp.buttons.map(b => b.pressed);
-            const pressedNow = currentButtons.some((p, i) => p && !state.lastGamepadButtons[i]);
+            const pressedNow = gp.buttons.some((b, i) => b.pressed && !state.lastGamepadButtons[i]);
             if (pressedNow) {
                 if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
                 else if (state.interactable) state.interactable.action();
             }
-            state.lastGamepadButtons = currentButtons;
+            state.lastGamepadButtons = gp.buttons.map(b => b.pressed);
         }
 
         const w = document.getElementById('winter');
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
             state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
-            
             state.frameTimer++;
             if (state.frameTimer > 10) {
                 state.walkFrame = state.walkFrame === 0 ? 1 : 0;
@@ -365,22 +365,13 @@
             if (dx > 0) w.style.transform = "scaleX(1)"; else if (dx < 0) w.style.transform = "scaleX(-1)";
         } else {
             w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
-            state.walkFrame = 0;
         }
-        w.style.left = (state.winterX - 46) + 'px'; w.style.top = (state.winterY - 120) + 'px';
+        w.style.left = (state.winterX - (state.room === 5 ? 29 : 46)) + 'px'; 
+        w.style.top = (state.winterY - (state.room === 5 ? 75 : 120)) + 'px';
     }
 
-    function startGame() { 
-        if(state.started) return;
-        state.started = true; 
-        document.getElementById('title-screen').style.display = 'none'; 
-        changeRoom(1, true); 
-        say("Where am I? Why is it so dark? I better find some light."); 
-        gameLoop(); 
-    }
-    
+    function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); say("Where am I?"); gameLoop(); }
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
-    
     function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
     function selectItem(idx) {
         if (!state.inventory[idx]) return; state.activeItem = state.inventory[idx];
@@ -388,9 +379,8 @@
         document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
         document.getElementById('s' + idx).classList.add('active-slot');
     }
-    function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
-    function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
     function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
+    function triggerEnd() { document.getElementById('end-screen').style.display = 'flex'; setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100); }
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
