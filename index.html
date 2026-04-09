@@ -248,7 +248,6 @@
 
                 if (pressed && !wasPrev) {
                     if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); }
-                    else if (document.getElementById('clue-overlay').style.display === 'flex') { closeClue(); } // FIX: Allow gamepad to dismiss clue
                     else if (titleShowing) { if(i === 9) showPasswordScreen(); }
                     else if (!passwordPassed) { } 
                     else if (document.getElementById('dialogue').style.display === 'block') { if(i === 3 || i === 0) advanceDialogue(); }
@@ -338,8 +337,8 @@
                 state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
             } }
         ]},
-        6: { bg: "WHITE_VOID", wall: 216, hotspots: [ // FIX: Set background to WHITE_VOID
-            { id: "Back", x: 640, y: 650, action: () => changeRoom(1) }
+        6: { bg: "Room1_Library.png", wall: 216, hotspots: [
+            { id: "Back", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => changeRoom(1) }
         ]}
     };
 
@@ -486,6 +485,7 @@
             const prevRoom = state.room;
             state.room = id;
 
+            // Reset shock unless in Room 6 or specifically triggered
             if (id !== 6) state.isShocked = false;
 
             if (id === 1 && !isInitial) {
@@ -520,19 +520,9 @@
     function renderScene() {
         const s = scenes[state.room]; 
         let bgImg = s.bg;
-        const bgEl = document.getElementById('bg');
-        
-        // FIX: Handle White Void Background
-        if (bgImg === "WHITE_VOID") {
-            bgEl.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-            bgEl.style.backgroundColor = "white";
-        } else {
-            if (state.room === 3 && state.vasePlaced) bgImg = "Room3_Billiards3.png";
-            bgEl.src = bgImg;
-            bgEl.style.backgroundColor = "transparent";
-        }
-        
-        bgEl.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+        if (state.room === 3 && state.vasePlaced) bgImg = "Room3_Billiards3.png";
+        document.getElementById('bg').src = bgImg;
+        document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
         const kidnapperEl = document.getElementById('kidnapper');
         if (state.room === 5) {
@@ -551,7 +541,7 @@
     }
 
     function updateMovement() {
-        if (document.getElementById('dialogue').style.display === 'block' || document.getElementById('end-screen').style.display === 'flex' || document.getElementById('clue-overlay').style.display === 'flex') return;
+        if (document.getElementById('dialogue').style.display === 'block' || document.getElementById('end-screen').style.display === 'flex') return;
         let dx = 0, dy = 0;
         if (state.keys["KeyW"] || state.keys['_dUp'])    dy -= 5;
         if (state.keys["KeyS"] || state.keys['_dDown'])  dy += 5;
@@ -605,20 +595,13 @@
     function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
     function triggerEnd() {
         state.gameCompleted = true; document.getElementById('end-screen').style.display = 'flex';
-        setTimeout(() => document.getElementById('end-screen').style.opacity = \"1\", 100);
+        setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100);
     }
-
-    // FIX: Set gameCompleted to false so it only reappears after new conversation
-    function closeCredits() { 
-        document.getElementById('end-screen').style.display = 'none'; 
-        state.gameCompleted = false; 
-    }
+    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
         if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); return; }
-        if (document.getElementById('clue-overlay').style.display === 'flex') { closeClue(); return; } // FIX: Allow keyboard to dismiss clue
-        
         if (titleShowing && (e.code === "Enter" || e.code === "Space")) { showPasswordScreen(); return; }
         if (!passwordPassed) return;
         if ((e.code === "Space" || e.code === "Enter") && document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
