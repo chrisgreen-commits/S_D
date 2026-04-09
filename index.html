@@ -1,5 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shadows & Daylight: Labyrinth of Excalibur</title>
+    <style>
+        body { margin: 0; background: #000; font-family: 'Courier New', monospace; color: #be9b7b; overflow: hidden; }
+        #game-container { 
+            position: relative; width: 1280px; height: 720px; 
+            margin: 40px auto; border: 6px solid #be9b7b; 
+            background: #000; overflow: hidden;
+        }
+        #bg { width: 100%; height: 100%; image-rendering: pixelated; position: absolute; }
+        
+        #fade-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background: black; z-index: 90; pointer-events: none;
+            opacity: 0; transition: opacity 0.5s;
+        }
+
+        #clue-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 80;
+            display: none; justify-content: center; align-items: center;
+        }
+        #clue-img { 
+            width: 300px; border: 15px solid #fff; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); image-rendering: pixelated;
+        }
+
+        #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
+        #kidnapper { position: absolute; height: 181.5px; width: auto; z-index: 4; image-rendering: pixelated; display: none; transform: translate(-50%, -100%); }
+
+        /* Floating particles for Coffee Heaven */
+        .coffee-particle {
+            position: absolute; z-index: 6; pointer-events: none;
+            font-size: 24px; transition: transform 0.1s linear;
+        }
+
+        #interact-prompt {
+            position: absolute; background: rgba(255,255,255,0.9); color: #000;
+            padding: 5px 12px; border-radius: 4px; font-weight: bold;
+            font-size: 20px; z-index: 50; display: none; transform: translate(-50%, -100%);
+            pointer-events: none; border: 2px solid #be9b7b;
+        }
+
+        /* PASSWORD SCREEN */
+        #password-screen {
+            position: absolute; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.97); z-index: 110;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 40px; box-sizing: border-box;
+        }
+        #password-screen input {
+            margin-top: 20px; padding: 10px 20px; font-size: 22px;
+            font-family: 'Courier New', monospace; background: #111;
+            border: 2px solid #be9b7b; color: #fff; text-align: center;
+            letter-spacing: 4px; outline: none;
+        }
+        #password-screen button {
+            margin-top: 15px; padding: 10px 30px; font-size: 18px;
+            font-family: 'Courier New', monospace; background: #222;
+            border: 2px solid #be9b7b; color: #be9b7b; cursor: pointer;
+        }
+        #password-screen button:hover { background: #333; }
+        #pw-error { color: #ff4444; font-size: 16px; margin-top: 12px; min-height: 20px; }
+
+        #title-screen, #end-screen {
+            position: absolute; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
+        }
+        #end-screen { display: none; opacity: 0; overflow-y: auto; }
+        .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
+        .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
+        
+        .credits-list { font-size: 16px; color: #fff; margin: 20px 0; line-height: 1.6; }
+        .credits-header { color: #be9b7b; font-weight: bold; margin-top: 15px; text-transform: uppercase; }
+
+        .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
+        #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
+        #obj-Notepad { width: 21.8px; } #obj-Vase { width: 54px; } #obj-Torch { width: 40px; }
+        #obj-Card { width: 25px; } #obj-Books { width: 50px; } #obj-Cue { width: 60px; }
+        
+        #inventory-bar { 
+            position: absolute; bottom: 0; width: 100%; height: 100px; 
+            background: rgba(0,0,0,0.9); border-top: 3px solid #be9b7b; 
+            display: flex; align-items: center; padding: 0 20px; z-index: 10;
+        }
+        #investigate-btn { font-size: 40px; cursor: pointer; margin-right: 70px; background: #222; border: 2px solid #be9b7b; border-radius: 5px; padding: 5px 15px; user-select: none; }
+        #slots-container { display: flex; overflow-x: auto; flex-grow: 1; }
+        .slot { min-width: 65px; height: 65px; border: 2px solid #444; margin-right: 10px; background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .slot img { width: 50px; height: 50px; }
+        .active-slot { border-color: #fff; box-shadow: 0 0 12px #fff; background: #333; }
+        
+        #dialogue { 
+            position: absolute; top: 30px; width: 84%; left: 8%; 
+            background: rgba(0,0,0,0.95); border: 3px solid #be9b7b; 
+            padding: 22px; display: none; z-index: 20; color: white; 
+            line-height: 1.4; font-size: 22px; cursor: pointer; min-height: 100px;
+        }
+        #dialogue img { float: left; width: 80px; height: 80px; margin-right: 20px; border: 2px solid #be9b7b; image-rendering: pixelated; background: #111; }
+        #dialogue span { display: block; margin-top: 10px; font-size: 14px; color: #be9b7b; font-style: italic; clear: both; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="fade-overlay"></div>
+    <div id="clue-overlay" onclick="closeClue()"><img id="clue-img" src="ItemCard.png"></div>
+
+    <audio id="mus-room1" loop><source src="Dark_ Elves_Jimena Contreras.mp3" type="audio/mpeg"></audio>
+    <audio id="mus-room2" loop><source src="Yacoby_Schwartzy.mp3" type="audio/mpeg"></audio>
+    <audio id="mus-room3" loop><source src="Never_Dont_Stop_Schwartzy.mp3" type="audio/mpeg"></audio>
+    <audio id="mus-room5" loop><source src="Taking_Chances_The_Soundings.mp3" type="audio/mpeg"></audio>
+    
+    <div id="interact-prompt">PRESS E / (A)</div>
+
+    <div id="title-screen" onclick="showPasswordScreen()">
+        <div class="title-small">SHADOWS & DAYLIGHT</div>
+        <div class="main-title">LABYRINTH OF EXCALIBUR</div>
+        <div class="title-small" style="margin-bottom: 50px;">By Christopher Green</div>
+        <p style="animation: blink 2s infinite;">CLICK OR PRESS START TO BEGIN</p>
+    </div>
+
+    <div id="password-screen">
+        <div class="title-small">SHADOWS & DAYLIGHT</div>
+        <div class="main-title" style="font-size:32px;">ENTER PASSWORD</div>
+        <input type="password" id="pw-input" maxlength="20" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') checkPassword()">
+        <button onclick="checkPassword()">ENTER</button>
+        <div id="pw-error"></div>
+    </div>
+
+    <div id="end-screen" onclick="closeCredits()">
+        <div class="main-title">TO BE CONTINUED...</div>
+        <div class="title-small">Written & created by Christopher Green</div>
+        <div class="title-small">Copyright 2026</div>
+        
+        <div class="credits-list">
+            <div class="credits-header">Tools</div>
+            cDox, Gemini, Claude, ChatGPT,<br>
+            GitHub & GitHub Copilot, Photoshop,<br>
+            YouTube Studio Music Library
+            
+            <div class="credits-header">Music</div>
+            Dungeon: "Dark Elves" by Jimena Contreras<br>
+            Hallway: "Yacoby" by Schwartzy<br>
+            Billiard Room: "Never Dont Stop" by Schwartzy<br>
+            Roof: "Taking Chances" by The Soundings<br>
+            Additional Music: "Los Cabos" by House of the Gipsies
+        </div>
+
+        <div class="title-small">shadowsanddaylight.ca for more of Winter's adventures</div>
+        <p style="animation: blink 3s infinite; font-size: 12px; margin-top: 20px;">CLICK TO RETURN TO GAME</p>
+    </div>
+
+    <img id="bg" src="Room1_Library.png">
+    <div id="particle-layer"></div>
+    
+    <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
+    <img id="obj-Books" src="ItemBooks.png" class="world-obj">
+    <img id="obj-Vase" src="ItemVase.png" class="world-obj">
+    <img id="obj-Card" src="ItemCard.png" class="world-obj">
+    <img id="obj-Notepad" src="ItemNotepad.png" class="world-obj">
+    <img id="obj-Phone" src="ItemPhone.png" class="world-obj">
+    <img id="obj-Balls" src="ItemBalls.png" class="world-obj">
+    <img id="obj-Cue" src="ItemCue.png" class="world-obj">
+    <img id="obj-Mug" src="ItemMug.png" class="world-obj">
+    
+    <img id="kidnapper" src="KidnapperTalk1.png">
+    <img id="winter" src="WinterIdle.png" style="left: 20px; top: auto; bottom: 100px;">
+    <div id="dialogue" onclick="advanceDialogue()"></div>
+
+    <div id="inventory-bar">
+        <div style="font-size: 14px; color: #be9b7b; margin-right: 15px;">EQUIPPED: <br><span id="active-txt" style="color:#fff">NONE</span></div>
+        <div id="investigate-btn" onclick="investigateItem()">🔍</div>
+        <div id="slots-container">
+            <div class="slot" id="s0" onclick="selectItem(0)"></div>
+            <div class="slot" id="s1" onclick="selectItem(1)"></div>
+            <div class="slot" id="s2" onclick="selectItem(2)"></div>
+            <div class="slot" id="s3" onclick="selectItem(3)"></div>
+            <div class="slot" id="s4" onclick="selectItem(4)"></div>
+            <div class="slot" id="s5" onclick="selectItem(5)"></div>
+            <div class="slot" id="s6" onclick="selectItem(6)"></div>
+            <div class="slot" id="s7" onclick="selectItem(7)"></div>
+            <div class="slot" id="s8" onclick="selectItem(8)"></div>
+        </div>
+    </div>
+</div>
+
 <script>
-    // ... existing constants ...
+    const CORRECT_PASSWORD = "DAYLIGHTER26";
+    let passwordPassed = false;
+    let titleShowing = true;
+
+    function showPasswordScreen() {
+        titleShowing = false;
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('password-screen').style.display = 'flex';
+        document.getElementById('pw-input').focus();
+    }
+
+    function checkPassword() {
+        const input = document.getElementById('pw-input').value.toUpperCase();
+        if (input === CORRECT_PASSWORD) {
+            passwordPassed = true;
+            document.getElementById('password-screen').style.display = 'none';
+            startGame();
+        } else {
+            document.getElementById('pw-error').innerText = "Incorrect password. Try again.";
+            document.getElementById('pw-input').value = '';
+        }
+    }
+
+    const GLOBAL_VOLUME = 0.10; 
+    const SCALE_X = 1280 / 1376;
+    const SCALE_Y = 720 / 768;
+    const R_W_SCALE_X = 1280 / 2629; 
+    const R_W_SCALE_Y = 720 / 1479;
 
     const state = {
         room: 1, inventory: [], activeItem: null, activeIdx: -1,
@@ -10,8 +229,11 @@
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
         room2DoorUnlocked: false,
         coffeeBeans: 0, playerLives: 1,
-        gameCompleted: false
+        gameCompleted: false,
+        coffeeParticles: []
     };
+
+    const gamepadState = { prevButtons: {} };
 
     function pollGamepad() {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -25,88 +247,367 @@
                 const wasPrev = gamepadState.prevButtons[gp.index][i];
 
                 if (pressed && !wasPrev) {
-                    // FIX: Allow gamepad to dismiss credits and the clue overlay
                     if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); }
-                    else if (document.getElementById('clue-overlay').style.display === 'flex') { closeClue(); }
-                    else if (titleShowing) { showPasswordScreen(); }
+                    else if (titleShowing) { if(i === 9) showPasswordScreen(); }
                     else if (!passwordPassed) { } 
-                    else if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); }
+                    else if (document.getElementById('dialogue').style.display === 'block') { if(i === 3 || i === 0) advanceDialogue(); }
                     else if (i === 2) { investigateItem(); }
                     else if (i === 4 || i === 14) { cycleInventory(-1); }
                     else if (i === 5 || i === 15) { cycleInventory(1); }
-                    else if (state.interactable) { state.interactable.action(); }
+                    else if (i === 0) { if (state.interactable) state.interactable.action(); }
                 }
                 gamepadState.prevButtons[gp.index][i] = pressed;
             }
-            // ... rest of polling ...
+
+            if (state.started && document.getElementById('dialogue').style.display !== 'block') {
+                const axisX = gp.axes[0] || 0;
+                const axisY = gp.axes[1] || 0;
+                const deadzone = 0.2;
+                state.keys['_gpX'] = Math.abs(axisX) > deadzone ? axisX : 0;
+                state.keys['_gpY'] = Math.abs(axisY) > deadzone ? axisY : 0;
+                state.keys['_dUp'] = gp.buttons[12]?.pressed;
+                state.keys['_dDown'] = gp.buttons[13]?.pressed;
+                state.keys['_dLeft'] = gp.buttons[14]?.pressed;
+                state.keys['_dRight'] = gp.buttons[15]?.pressed;
+            }
         }
         requestAnimationFrame(pollGamepad);
     }
+    requestAnimationFrame(pollGamepad);
+
+    function cycleInventory(dir) {
+        if (state.inventory.length === 0) return;
+        state.activeIdx = (state.activeIdx + dir + state.inventory.length) % state.inventory.length;
+        selectItem(state.activeIdx);
+    }
+
+    const dialogueSequences = {
+        "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
+        "Phone": ["I wonder who this belongs too? It's an older cell phone. Early 2000s. The contact page says, Detective Ambrose Smith."],
+        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
+        "PhoneDead": ["The phone is completely dead. No way to turn it on."],
+        "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
+        "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
+        "Window": ["Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though."],
+        "VasePlace": ["Much better!", "W-What's that noise?", "TRIGGER_ROOM3_OPEN"],
+        "FlowerObserve": ["Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in."],
+        "Mug": ["COFFEE_HEAVEN_SEQUENCE"],
+        "CoffeeHeavenEntry": ["I'm in coffee heaven!!!"],
+        "Torch": ["It's a heavy iron torch. It's lighting the way."],
+        "Vase": ["A simple ceramic vase. It looks like it belongs on a pedestal."],
+        "Card": ["An Ace of Spades. Detective Smith seemed to think this was important."],
+        "Balls": ["Standard billiard balls. They're quite heavy."],
+        "Cue": ["A sturdy pool cue. It's well-balanced."]
+    };
 
     const scenes = {
         1: { bg: "Room1_Library.png", wall: 216, hotspots: [
-            // ... other hotspots ...
+            { id: "Torch", x: 608 * SCALE_X, y: 407 * SCALE_Y, action: () => { if(state.isDark){ pickup("Torch", "ItemTorch.png", "A torch! This helps."); state.isDark=false; renderScene();} } },
+            { id: "Books", x: 951 * SCALE_X, y: 310 * SCALE_Y, action: () => pickup("Books", "ItemBooks.png", "Hmm, a book about King Arthur.", true) },
+            { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
+            { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Secret", x: 192, y: 504, action: () => {
-                if (state.activeItem === "Mug") { 
-                    changeRoom(4); // Transport to Secret Room
-                    say("The coffee bean power opens the secret door!"); 
-                } 
-                else { say("Hmm, a secret door. It's locked tight. I'll need to find another way."); }
+                if (state.activeItem === "Mug") changeRoom(6); 
+                else say("Hmm, a secret door. It's locked tight. I'll need to find another way.");
             }},
-            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { if(state.remarkMade) changeRoom(2); else say("I feel like I'm missing something important in this room."); } }
+            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
+                if(state.remarkMade) changeRoom(2); 
+                else if(state.activeItem === "Books") { state.dialogueStep = 1; advanceDialogue(); }
+                else say("I feel like I'm missing something important in this room."); 
+            } }
         ]},
-        2: { /* ... hallway hotspots ... */ },
-        3: { /* ... billiard hotspots ... */ },
-        // ADDED: Secret Room (White Void)
-        4: { bg: "WHITE_VOID", wall: 216, hotspots: [
-            { id: "Back", x: 100, y: 550, action: () => changeRoom(1) }
+        2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
+            { id: "Back", x: 100, y: 550, action: () => changeRoom(1) },
+            { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 788 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
+            { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
+            { id: "Next", x: 1150, y: 550, action: () => handleBilliardEntry() } 
+        ]},
+        3: { bg: "Room3_Billiards.png", wall: 432, hotspots: [ 
+            { id: "Back", x: 100 * R_W_SCALE_X, y: 759 * R_W_SCALE_Y, action: () => changeRoom(2) },
+            { id: "Balls", x: (2000-150) * R_W_SCALE_X, y: (1000-100) * R_W_SCALE_Y, action: () => pickup("Balls", "ItemBalls.png", "Maybe I'll keep these pool balls and a cue, in case I need to defend myself.") },
+            { id: "Cue", x: (2050+150) * R_W_SCALE_X, y: 1020 * R_W_SCALE_Y, action: () => pickup("Cue", "ItemCue.png", "A pool cue.") },
+            { id: "Mug", x: 1250 * R_W_SCALE_X, y: 890 * R_W_SCALE_Y, action: () => pickup("Mug", "ItemMug.png", "A coffee mug.") },
+            { id: "Flower", x: (1796-100) * R_W_SCALE_X, y: 692 * R_W_SCALE_Y, action: () => handleFlower() },
+            { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back3", x: 192, y: 550 - 25, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { if(state.gameCompleted) return; state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Back3", x: 225, y: 557, action: () => changeRoom(3) },
+            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { 
+                if(state.gameCompleted) { say("I've given you my offer, Winter. The choice is yours."); return; }
+                state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
+            } }
+        ]},
+        6: { bg: "Room1_Library.png", wall: 216, hotspots: [
+            { id: "Back", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => changeRoom(1) }
         ]}
     };
+
+    function initCoffeeParticles() {
+        const layer = document.getElementById('particle-layer');
+        layer.innerHTML = '';
+        state.coffeeParticles = [];
+        for (let i = 0; i < 10; i++) {
+            const el = document.createElement('div');
+            el.className = 'coffee-particle';
+            el.innerHTML = (i % 2 === 0) ? '❤️' : '<img src="ItemMug.png" style="width:25px;">';
+            layer.appendChild(el);
+            state.coffeeParticles.push({
+                el: el, angle: Math.random() * Math.PI * 2, radius: 40 + Math.random() * 40,
+                speed: 0.02 + Math.random() * 0.03, yOffset: Math.random() * 30
+            });
+        }
+    }
+
+    function updateParticles() {
+        const layer = document.getElementById('particle-layer');
+        if (state.room !== 6) { layer.style.display = 'none'; return; }
+        layer.style.display = 'block';
+        const headX = state.winterX;
+        const headY = state.winterY - 180;
+        state.coffeeParticles.forEach(p => {
+            p.angle += p.speed;
+            const x = headX + Math.cos(p.angle) * p.radius;
+            const y = headY + Math.sin(p.angle * 0.5) * p.radius - p.yOffset;
+            p.el.style.left = x + 'px'; p.el.style.top = y + 'px';
+        });
+    }
+
+    function handleBilliardEntry() {
+        if (state.room2DoorUnlocked) { changeRoom(3); }
+        else if (state.activeItem === "Card") { state.lockpicking = true; state.dialogueStep = 0; advanceDialogue(); }
+        else say(Math.random() > 0.5 ? "Hmm, that one's locked." : "I'll need a key or something to open this.");
+    }
+
+    function advanceDialogue() {
+        const d = document.getElementById('dialogue');
+        const winter = document.getElementById('winter');
+        d.style.backgroundColor = "rgba(0,0,0,0.95)";
+
+        if (state.cutsceneStep >= 100) {
+            const finalLines = [{ s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
+            const idx = state.cutsceneStep - 100;
+            if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
+            else { d.style.display = 'none'; triggerEnd(); }
+            return;
+        }
+
+        const seqName = state.lockpicking ? "Lockpick" : (state.activeItem === "Phone" && state.phoneDead) ? "PhoneDead" : (state.activeItem === "Phone" && state.notepadRead) ? "PhoneClue" : state.activeItem;
+        const seq = dialogueSequences[seqName];
+
+        if (seq && state.dialogueStep < seq.length) {
+            let text = seq[state.dialogueStep];
+            if (text === "COFFEE_HEAVEN_SEQUENCE") {
+                state.coffeeBeans += 5;
+                if (state.coffeeBeans >= 50) {
+                    state.coffeeBeans = 0; state.playerLives++;
+                    say("Welcome to Coffee Heaven! You've collected enough beans for an extra life! Total lives: " + state.playerLives, false, "ItemMug.png", "#4e342e");
+                } else {
+                    say("Welcome to Coffee Heaven! You've found some coffee beans. Beans collected: " + state.coffeeBeans + "/50", false, "ItemMug.png", "#4e342e");
+                }
+                state.dialogueStep = 99; return;
+            }
+            if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
+            else if (state.activeItem === "Notepad") {
+                if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
+                else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
+                else say(text);
+            } else if (seqName === "PhoneClue") {
+                if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
+                else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. I'll have to keep that in mind for later."); state.phoneDead = true; }
+                else say(text);
+            } else if (state.activeItem === "Books") {
+                if (state.dialogueStep === 1) say("📖 " + text, true, null, "#5d4037");
+                else if (state.dialogueStep === 2) { say(text); state.remarkMade = true; }
+                else say(text);
+            }
+            else if (text === "TRIGGER_ROOM3_OPEN") {
+                document.getElementById('bg').src = "Room3_Billiards3.png";
+                state.isShocked = true; state.vasePlaced = true;
+                winter.src = "WinterIdleShock.png"; say("The wall... it just opened up.");
+            }
+            else say(text);
+            state.dialogueStep++;
+        } else { d.style.display = 'none'; if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); }
+    }
+
+    function say(msg, skipPortrait = false, portraitOverride = null, bgOverride = null) {
+        const d = document.getElementById('dialogue');
+        if (bgOverride) d.style.backgroundColor = bgOverride;
+        let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
+        d.innerHTML = `<img src="${img}">${msg}<span>(Space / Button to continue)</span>`;
+        d.style.display = 'block';
+    }
+
+    function handleFlower() {
+        if (state.vasePlaced) changeRoom(5); 
+        else if (state.activeItem === "Vase") { 
+            document.getElementById('bg').src = "Room3_Billiards2.png"; 
+            state.activeItem = "VasePlace"; state.dialogueStep = 0; advanceDialogue(); 
+        } 
+        else { state.activeItem = "FlowerObserve"; state.dialogueStep = 0; advanceDialogue(); }
+    }
+
+    function pickup(name, img, msg, endSequence = false) {
+        state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
+        state.activeIdx = state.inventory.length - 1;
+        if(state.activeIdx < 9) document.getElementById('s' + state.activeIdx).innerHTML = `<img src="${img}">`;
+        selectItem(state.activeIdx); say(msg);
+        if (endSequence) state.dialogueStep = 99; 
+    }
+
+    function checkProximity() {
+        const prompt = document.getElementById('interact-prompt');
+        let found = null;
+        if (scenes[state.room].hotspots) {
+            scenes[state.room].hotspots.forEach(hs => {
+                const isTransition = ["Exit", "Back", "Back3", "Next", "Secret"].includes(hs.id);
+                if (!isTransition && !["Flower", "Kidnapper", "Window"].includes(hs.id) && state.inventory.includes(hs.id)) return;
+                const dx = Math.abs(state.winterX - hs.x);
+                const dy = Math.abs(state.winterY - hs.y);
+                const rangeX = isTransition ? 100 : 75; 
+                const rangeY = isTransition ? 250 : 150;
+                if (dx < rangeX && dy < rangeY) found = hs;
+            });
+        }
+        state.interactable = found;
+        if (found) {
+            prompt.style.display = 'block'; prompt.style.left = state.winterX + 'px';
+            prompt.style.top = (state.winterY - (state.room === 5 ? 75 : 180)) + 'px';
+        } else prompt.style.display = 'none';
+    }
+
+    function changeRoom(id, isInitial = false) {
+        const fade = document.getElementById('fade-overlay'); fade.style.opacity = "1";
+        setTimeout(() => {
+            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5'), 6: document.getElementById('mus-room3') };
+            Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
+            
+            const prevRoom = state.room;
+            state.room = id;
+
+            // Reset shock unless in Room 6 or specifically triggered
+            if (id !== 6) state.isShocked = false;
+
+            if (id === 1 && !isInitial) {
+                state.winterX = (prevRoom === 6) ? 220 : 1100;
+                state.winterY = 550;
+            } else if (id === 2 && prevRoom === 1) {
+                state.winterX = 150; state.winterY = 550;
+            } else if (id === 2 && prevRoom === 3) {
+                state.winterX = 1100; state.winterY = 550;
+            } else if (id === 3 && (prevRoom === 2 || prevRoom === 5)) {
+                state.winterX = (prevRoom === 5) ? 1000 : 150;
+                state.winterY = 550;
+            } else if (id === 5) {
+                state.winterX = 150; state.winterY = 550 - 125; 
+            } else if (id === 6) {
+                state.winterX = 640; state.winterY = 550;
+                state.isShocked = true;
+                initCoffeeParticles();
+                state.activeItem = "CoffeeHeavenEntry";
+                state.dialogueStep = 0;
+                setTimeout(advanceDialogue, 500);
+            } else if (isInitial) {
+                state.winterX = 80; state.winterY = 550;
+            }
+
+            document.getElementById('winter').src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
+            const currentMus = musicMap[id]; if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
+            renderScene(); fade.style.opacity = "0";
+        }, 500);
+    }
 
     function renderScene() {
         const s = scenes[state.room]; 
         let bgImg = s.bg;
-        const bgEl = document.getElementById('bg');
+        if (state.room === 3 && state.vasePlaced) bgImg = "Room3_Billiards3.png";
+        document.getElementById('bg').src = bgImg;
+        document.getElementById('bg').style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
         
-        // Handle Secret Room Background
-        if (bgImg === "WHITE_VOID") {
-            bgEl.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; // Transparent pixel
-            bgEl.style.backgroundColor = "white";
-            bgEl.style.filter = "none";
+        const kidnapperEl = document.getElementById('kidnapper');
+        if (state.room === 5) {
+            const hs = s.hotspots.find(h => h.id === "Kidnapper");
+            kidnapperEl.style.left = hs.x + "px"; kidnapperEl.style.top = hs.y + "px"; kidnapperEl.style.display = 'block';
+        } else kidnapperEl.style.display = 'none';
+
+        ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
+            const el = document.getElementById('obj-' + name); if (!el) return;
+            const hs = s.hotspots ? s.hotspots.find(h => h.id === name) : null;
+            if (hs && !state.inventory.includes(name)) {
+                el.style.left = hs.x + "px"; el.style.top = hs.y + "px";
+                el.style.display = (state.room === 1 && state.isDark && name !== "Torch") ? 'none' : 'block';
+            } else el.style.display = 'none';
+        });
+    }
+
+    function updateMovement() {
+        if (document.getElementById('dialogue').style.display === 'block' || document.getElementById('end-screen').style.display === 'flex') return;
+        let dx = 0, dy = 0;
+        if (state.keys["KeyW"] || state.keys['_dUp'])    dy -= 5;
+        if (state.keys["KeyS"] || state.keys['_dDown'])  dy += 5;
+        if (state.keys["KeyA"] || state.keys['_dLeft'])  dx -= 5;
+        if (state.keys["KeyD"] || state.keys['_dRight']) dx += 5;
+        if (state.keys['_gpX']) dx += state.keys['_gpX'] * 5;
+        if (state.keys['_gpY']) dy += state.keys['_gpY'] * 5;
+        
+        const w = document.getElementById('winter');
+        const currentScale = (state.room === 5) ? 0.75 : 1;
+
+        if (dx !== 0 || dy !== 0) {
+            state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
+            state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
+            state.frameTimer++;
+            if (state.frameTimer > 10) {
+                state.walkFrame = state.walkFrame === 0 ? 1 : 0;
+                w.src = state.isShocked ? (state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png") : (state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png");
+                state.frameTimer = 0;
+            }
+            w.style.transform = `scale(${(dx > 0 ? 1 : -1) * currentScale}, ${currentScale})`;
         } else {
-            if (state.room === 3 && state.vasePlaced) bgImg = "Room3_Billiards3.png";
-            bgEl.src = bgImg;
-            bgEl.style.backgroundColor = "transparent";
-            bgEl.style.filter = (state.room === 1 && state.isDark) ? "brightness(0.08)" : "none";
+            w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
+            state.walkFrame = 0;
         }
         
-        // ... rest of item and kidnapper rendering ...
+        w.style.left = (state.winterX - 46) + 'px'; 
+        w.style.top = (state.winterY - (state.room === 5 ? 90 : 120)) + 'px';
+        updateParticles();
     }
 
-    // FIX: Clear completion state so credits only show when conversation is finished
-    function closeCredits() { 
-        document.getElementById('end-screen').style.display = 'none'; 
-        state.gameCompleted = false; 
+    function startGame() {
+        state.gameCompleted = false;
+        state.started = true;
+        const w = document.getElementById('winter');
+        w.style.bottom = '';
+        w.style.top = (state.winterY - 120) + 'px'; w.style.left = (state.winterX - 46) + 'px';
+        changeRoom(1, true);
+        say("Where am I? Why is it so dark? I better find some light.");
+        gameLoop();
     }
+    function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
+    function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
+    function selectItem(idx) {
+        if (!state.inventory[idx]) return; 
+        state.activeIdx = idx; state.activeItem = state.inventory[idx];
+        document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
+        document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
+        document.getElementById('s' + idx).classList.add('active-slot');
+    }
+    function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
+    function triggerEnd() {
+        state.gameCompleted = true; document.getElementById('end-screen').style.display = 'flex';
+        setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100);
+    }
+    function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
 
-    // FIX: Allow keyboard to dismiss clue overlay
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
         if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); return; }
-        if (document.getElementById('clue-overlay').style.display === 'flex') { closeClue(); return; }
-        
-        if (titleShowing && (e.code === "Enter" || e.code === "Space")) {
-            showPasswordScreen();
-            return;
-        }
+        if (titleShowing && (e.code === "Enter" || e.code === "Space")) { showPasswordScreen(); return; }
         if (!passwordPassed) return;
-        if (e.code === "Enter" || e.code === "Space") {
-            if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
-        }
+        if ((e.code === "Space" || e.code === "Enter") && document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
         if (e.code === "KeyE" && state.interactable) state.interactable.action();
     });
+    window.addEventListener("keyup", e => state.keys[e.code] = false);
 </script>
+</body>
+</html>
