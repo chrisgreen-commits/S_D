@@ -61,14 +61,17 @@
 
         #title-screen, #end-screen {
             position: absolute; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); z-index: 100;
+            background: rgba(0,0,0,0.95); z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; transition: opacity 1s; padding: 40px; box-sizing: border-box;
         }
-        #end-screen { display: none; opacity: 0; }
+        #end-screen { display: none; opacity: 0; overflow-y: auto; }
         .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
+        .credits-list { font-size: 16px; color: #fff; margin: 20px 0; line-height: 1.6; }
+        .credits-header { color: #be9b7b; font-weight: bold; margin-top: 15px; text-transform: uppercase; }
+
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; }
         #obj-Mug { width: 17.5px; } #obj-Balls { width: 35px; } #obj-Phone { width: 20.1px; } 
         #obj-Notepad { width: 21.8px; } #obj-Vase { width: 54px; } #obj-Torch { width: 40px; }
@@ -127,6 +130,24 @@
     <div id="end-screen" onclick="closeCredits()">
         <div class="main-title">TO BE CONTINUED...</div>
         <div class="title-small">Written & created by Christopher Green</div>
+        <div class="title-small">Copyright 2026</div>
+        
+        <div class="credits-list">
+            <div class="credits-header">Tools</div>
+            cDox, Gemini, Claude, ChatGPT,<br>
+            GitHub & GitHub Copilot, Photoshop,<br>
+            YouTube Studio Music Library
+            
+            <div class="credits-header">Music</div>
+            Dungeon: "Dark Elves" by Jimena Contreras<br>
+            Hallway: "Yacoby" by Schwartzy<br>
+            Billiard Room: "Never Dont Stop" by Schwartzy<br>
+            Roof: "Taking Chances" by The Soundings<br>
+            Additional Music: "Los Cabos" by House of the Gipsies
+        </div>
+
+        <div class="title-small">shadowsanddaylight.ca for more of Winter's adventures</div>
+        <p style="animation: blink 3s infinite; font-size: 12px; margin-top: 20px;">CLICK TO RETURN TO GAME</p>
     </div>
 
     <img id="bg" src="Room1_Library.png">
@@ -215,7 +236,8 @@
                 const wasPrev = gamepadState.prevButtons[gp.index][i];
 
                 if (pressed && !wasPrev) {
-                    if (titleShowing) { showPasswordScreen(); }
+                    if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); }
+                    else if (titleShowing) { showPasswordScreen(); }
                     else if (!passwordPassed) { } 
                     else if (document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); }
                     else if (i === 2) { investigateItem(); }
@@ -285,7 +307,7 @@
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Kidnapper", x: 1000, y: 330 + 50, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
@@ -402,6 +424,9 @@
             } else if (id === 2 && state.room === 1) {
                 state.winterX = 2629 * 0.25 * R_W_SCALE_X;
                 state.winterY = 784 * R_W_SCALE_Y;
+            } else if (id === 5) {
+                state.winterX = 150;
+                state.winterY = 550 - 100; // 100px higher spawn
             } else {
                 state.winterX = 80;
                 state.winterY = 550;
@@ -444,7 +469,7 @@
     }
 
     function updateMovement() {
-        if (document.getElementById('dialogue').style.display === 'block') return;
+        if (document.getElementById('dialogue').style.display === 'block' || document.getElementById('end-screen').style.display === 'flex') return;
         let dx = 0, dy = 0;
         if (state.keys["KeyW"] || state.keys['_dUp'])    dy -= 5;
         if (state.keys["KeyS"] || state.keys['_dDown'])  dy += 5;
@@ -513,6 +538,10 @@
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
+        if (document.getElementById('end-screen').style.display === 'flex') {
+            closeCredits();
+            return;
+        }
         if (titleShowing && (e.code === "Enter" || e.code === "Space")) {
             showPasswordScreen();
             return;
