@@ -34,12 +34,11 @@
         .title-small { font-size: 20px; letter-spacing: 3px; color: #be9b7b; margin: 5px 0; user-select: none; }
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
-        /* ITEM SCALING SECTION */
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; width: 70px; }
         #obj-Mug { width: 17.5px; } 
         #obj-Balls { width: 35px; } 
-        #obj-Phone { width: 17.5px; } /* 25% of 70px */
-        #obj-Notepad { width: 17.5px; } /* 25% of 70px */
+        #obj-Phone { width: 17.5px; } 
+        #obj-Notepad { width: 17.5px; } 
         
         #inventory-bar { 
             position: absolute; bottom: 0; width: 100%; height: 100px; 
@@ -289,8 +288,10 @@
         let dx = 0, dy = 0;
         
         const gp = navigator.getGamepads()[0];
-        
+        const dialogueVisible = document.getElementById('dialogue').style.display === 'block';
+
         if (gp) {
+            // Y Button Toggle
             const btnY = gp.buttons[3].pressed;
             if (btnY && !state.lastGamepadY) {
                 state.inventoryFocus = !state.inventoryFocus;
@@ -298,29 +299,30 @@
             }
             state.lastGamepadY = btnY;
 
+            // Global A Button logic
+            const btnA = gp.buttons[0].pressed;
+            if (btnA && !state.lastGamepadA) {
+                if (dialogueVisible) {
+                    advanceDialogue();
+                } else if (state.inventoryFocus) {
+                    selectItem(state.selectedSlot);
+                    state.inventoryFocus = false;
+                    updateSlotHighlights();
+                } else if (state.interactable) {
+                    state.interactable.action();
+                }
+            }
+            state.lastGamepadA = btnA;
+
             if (state.inventoryFocus) {
                 if (state.navCooldown <= 0) {
                     if (gp.axes[0] > 0.5) { state.selectedSlot = (state.selectedSlot + 1) % 9; state.navCooldown = 15; }
                     if (gp.axes[0] < -0.5) { state.selectedSlot = (state.selectedSlot + 8) % 9; state.navCooldown = 15; }
                     updateSlotHighlights();
                 }
-                const btnA = gp.buttons[0].pressed;
-                if (btnA && !state.lastGamepadA) {
-                    selectItem(state.selectedSlot);
-                    state.inventoryFocus = false;
-                    updateSlotHighlights();
-                }
-                state.lastGamepadA = btnA;
-            } else {
+            } else if (!dialogueVisible) {
                 if (Math.abs(gp.axes[0]) > 0.2) dx += gp.axes[0] * 5;
                 if (Math.abs(gp.axes[1]) > 0.2) dy += gp.axes[1] * 5;
-                
-                const btnA = gp.buttons[0].pressed;
-                if (btnA && !state.lastGamepadA) {
-                    if (document.getElementById('dialogue').style.display === 'block') advanceDialogue();
-                    else if (state.interactable) state.interactable.action();
-                }
-                state.lastGamepadA = btnA;
             }
 
             const btnX = gp.buttons[2].pressed;
@@ -328,7 +330,7 @@
             state.lastGamepadX = btnX;
         }
 
-        if (!state.inventoryFocus) {
+        if (!state.inventoryFocus && !dialogueVisible) {
             if (state.keys["KeyW"]) dy -= 5; if (state.keys["KeyS"]) dy += 5;
             if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         }
@@ -424,7 +426,7 @@
 
     function say(msg, autoHide) {
         const d = document.getElementById('dialogue');
-        d.innerHTML = msg + (autoHide ? "" : "<span>(Click to continue)</span>");
+        d.innerHTML = msg + (autoHide ? "" : "<span>(Click or press A to continue)</span>");
         d.style.display = 'block';
         if (autoHide) setTimeout(() => { if(d.innerHTML.includes(msg)) d.style.display = 'none'; }, 4000);
     }
@@ -437,7 +439,6 @@
                 if (hs.id === "Secret" || hs.id === "ExitVoid" || hs.id === "Next") {} 
                 else if (["Exit", "Back", "Back3", "Flower", "Kidnapper", "Window"].indexOf(hs.id) === -1 && state.inventory.includes(hs.id)) return;
                 const dx = Math.abs(state.winterX - hs.x); const dy = Math.abs(state.winterY - hs.y);
-                // Increased proximity buffer for smaller items
                 const buffer = (hs.id === "Phone" || hs.id === "Notepad") ? 150 : 100;
                 if (dx < buffer && dy < 300) found = hs;
             });
@@ -490,19 +491,25 @@
 
     window.addEventListener("keydown", e => {
         state.keys[e.code] = true;
+        const dialogueVisible = document.getElementById('dialogue').style.display === 'block';
+        
         if (e.code === "Tab") { 
             e.preventDefault(); 
             state.inventoryFocus = !state.inventoryFocus; 
             updateSlotHighlights(); 
         }
-        if (state.inventoryFocus) {
+
+        if (dialogueVisible && e.code === "Enter") {
+            advanceDialogue();
+        } else if (state.inventoryFocus) {
             if (e.code === "ArrowRight") { state.selectedSlot = (state.selectedSlot + 1) % 9; updateSlotHighlights(); }
             if (e.code === "ArrowLeft") { state.selectedSlot = (state.selectedSlot + 8) % 9; updateSlotHighlights(); }
             if (e.code === "Enter") { selectItem(state.selectedSlot); state.inventoryFocus = false; updateSlotHighlights(); }
+        } else if (e.code === "KeyE" && state.interactable) {
+            state.interactable.action();
         }
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
-    window.addEventListener("keydown", e => { if(e.code === "KeyE" && state.interactable) state.interactable.action(); });
 </script>
 </body>
 </html>
