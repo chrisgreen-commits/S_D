@@ -31,6 +31,12 @@
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
         #kidnapper { position: absolute; height: 181.5px; width: auto; z-index: 4; image-rendering: pixelated; display: none; transform: translate(-50%, -100%); }
 
+        /* Floating particles for Coffee Heaven */
+        .coffee-particle {
+            position: absolute; z-index: 6; pointer-events: none;
+            font-size: 24px; transition: transform 0.1s linear;
+        }
+
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
             padding: 5px 12px; border-radius: 4px; font-weight: bold;
@@ -151,6 +157,8 @@
     </div>
 
     <img id="bg" src="Room1_Library.png">
+    <div id="particle-layer"></div>
+    
     <img id="obj-Torch" src="ItemTorch.png" class="world-obj">
     <img id="obj-Books" src="ItemBooks.png" class="world-obj">
     <img id="obj-Vase" src="ItemVase.png" class="world-obj">
@@ -221,7 +229,8 @@
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
         room2DoorUnlocked: false,
         coffeeBeans: 0, playerLives: 1,
-        gameCompleted: false
+        gameCompleted: false,
+        coffeeParticles: []
     };
 
     const gamepadState = { prevButtons: {} };
@@ -241,7 +250,7 @@
                     if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); }
                     else if (titleShowing) { if(i === 9) showPasswordScreen(); }
                     else if (!passwordPassed) { } 
-                    else if (document.getElementById('dialogue').style.display === 'block') { if(i === 3) advanceDialogue(); }
+                    else if (document.getElementById('dialogue').style.display === 'block') { if(i === 3 || i === 0) advanceDialogue(); }
                     else if (i === 2) { investigateItem(); }
                     else if (i === 4 || i === 14) { cycleInventory(-1); }
                     else if (i === 5 || i === 15) { cycleInventory(1); }
@@ -282,7 +291,8 @@
         "Window": ["Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though."],
         "VasePlace": ["Much better!", "W-What's that noise?", "TRIGGER_ROOM3_OPEN"],
         "FlowerObserve": ["Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in."],
-        "Mug": ["COFFEE_HEAVEN_SEQUENCE"]
+        "Mug": ["COFFEE_HEAVEN_SEQUENCE"],
+        "CoffeeHeavenEntry": ["I'm in coffee heaven!!!"]
     };
 
     const scenes = {
@@ -292,11 +302,8 @@
             { id: "Vase", x: 779 * SCALE_X, y: 302 * SCALE_Y, action: () => pickup("Vase", "ItemVase.png", "A dusty vase.") },
             { id: "Card", x: 436 * SCALE_X, y: 180 * SCALE_Y, action: () => pickup("Card", "ItemCard.png", "A playing card.") },
             { id: "Secret", x: 192, y: 504, action: () => {
-                if (state.activeItem === "Mug") { 
-                    say("The coffee bean power opens the secret door!"); 
-                    // To proceed, you could changeRoom(4) if you have a secret room asset
-                } 
-                else { say("Hmm, a secret door. It's locked tight. I'll need to find another way."); }
+                if (state.activeItem === "Mug") changeRoom(6); 
+                else say("Hmm, a secret door. It's locked tight. I'll need to find another way.");
             }},
             { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
                 if(state.remarkMade) changeRoom(2); 
@@ -324,8 +331,41 @@
                 if(state.gameCompleted) { say("I've given you my offer, Winter. The choice is yours."); return; }
                 state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
             } }
+        ]},
+        6: { bg: "Room1_Library.png", wall: 216, hotspots: [
+            { id: "Back", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => changeRoom(1) }
         ]}
     };
+
+    function initCoffeeParticles() {
+        const layer = document.getElementById('particle-layer');
+        layer.innerHTML = '';
+        state.coffeeParticles = [];
+        for (let i = 0; i < 10; i++) {
+            const el = document.createElement('div');
+            el.className = 'coffee-particle';
+            el.innerHTML = (i % 2 === 0) ? '❤️' : '<img src="ItemMug.png" style="width:25px;">';
+            layer.appendChild(el);
+            state.coffeeParticles.push({
+                el: el, angle: Math.random() * Math.PI * 2, radius: 40 + Math.random() * 40,
+                speed: 0.02 + Math.random() * 0.03, yOffset: Math.random() * 30
+            });
+        }
+    }
+
+    function updateParticles() {
+        const layer = document.getElementById('particle-layer');
+        if (state.room !== 6) { layer.style.display = 'none'; return; }
+        layer.style.display = 'block';
+        const headX = state.winterX;
+        const headY = state.winterY - 180;
+        state.coffeeParticles.forEach(p => {
+            p.angle += p.speed;
+            const x = headX + Math.cos(p.angle) * p.radius;
+            const y = headY + Math.sin(p.angle * 0.5) * p.radius - p.yOffset;
+            p.el.style.left = x + 'px'; p.el.style.top = y + 'px';
+        });
+    }
 
     function handleBilliardEntry() {
         if (state.room2DoorUnlocked) { changeRoom(3); }
@@ -354,14 +394,12 @@
             if (text === "COFFEE_HEAVEN_SEQUENCE") {
                 state.coffeeBeans += 5;
                 if (state.coffeeBeans >= 50) {
-                    state.coffeeBeans = 0;
-                    state.playerLives++;
+                    state.coffeeBeans = 0; state.playerLives++;
                     say("Welcome to Coffee Heaven! You've collected enough beans for an extra life! Total lives: " + state.playerLives, false, "ItemMug.png", "#4e342e");
                 } else {
                     say("Welcome to Coffee Heaven! You've found some coffee beans. Beans collected: " + state.coffeeBeans + "/50", false, "ItemMug.png", "#4e342e");
                 }
-                state.dialogueStep = 99;
-                return;
+                state.dialogueStep = 99; return;
             }
             if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
             else if (state.activeItem === "Notepad") {
@@ -369,7 +407,7 @@
                 else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
             } else if (seqName === "PhoneClue") {
                 if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
-                else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. Can't imagine an old castle like this has a lot of electrical outlets. I'll have to keep that in mind for later."); state.phoneDead = true; }
+                else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. I'll have to keep that in mind for later."); state.phoneDead = true; }
                 else say(text);
             } else if (state.activeItem === "Books") {
                 if (state.dialogueStep === 1) say("📖 " + text, true, null, "#5d4037");
@@ -377,21 +415,12 @@
             }
             else if (text === "TRIGGER_ROOM3_OPEN") {
                 document.getElementById('bg').src = "Room3_Billiards3.png";
-                state.isShocked = true;
-                state.vasePlaced = true;
-                winter.src = "WinterIdleShock.png";
-                say("The wall... it just opened up.");
-            }
-            else if (seqName === "VasePlace" && state.dialogueStep === 1) {
-                winter.src = "WinterIdleShock.png";
-                say(text);
+                state.isShocked = true; state.vasePlaced = true;
+                winter.src = "WinterIdleShock.png"; say("The wall... it just opened up.");
             }
             else say(text);
             state.dialogueStep++;
-        } else { 
-            d.style.display = 'none'; 
-            if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); 
-        }
+        } else { d.style.display = 'none'; if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); }
     }
 
     function say(msg, skipPortrait = false, portraitOverride = null, bgOverride = null) {
@@ -406,23 +435,16 @@
         if (state.vasePlaced) changeRoom(5); 
         else if (state.activeItem === "Vase") { 
             document.getElementById('bg').src = "Room3_Billiards2.png"; 
-            state.activeItem = "VasePlace"; 
-            state.dialogueStep = 0; 
-            advanceDialogue(); 
+            state.activeItem = "VasePlace"; state.dialogueStep = 0; advanceDialogue(); 
         } 
-        else { 
-            state.activeItem = "FlowerObserve"; 
-            state.dialogueStep = 0; 
-            advanceDialogue(); 
-        }
+        else { state.activeItem = "FlowerObserve"; state.dialogueStep = 0; advanceDialogue(); }
     }
 
     function pickup(name, img, msg, endSequence = false) {
         state.inventory.push(name); document.getElementById('obj-'+name).style.display = 'none';
         state.activeIdx = state.inventory.length - 1;
         if(state.activeIdx < 9) document.getElementById('s' + state.activeIdx).innerHTML = `<img src="${img}">`;
-        selectItem(state.activeIdx);
-        say(msg);
+        selectItem(state.activeIdx); say(msg);
         if (endSequence) state.dialogueStep = 99; 
     }
 
@@ -450,34 +472,39 @@
     function changeRoom(id, isInitial = false) {
         const fade = document.getElementById('fade-overlay'); fade.style.opacity = "1";
         setTimeout(() => {
-            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5') };
+            const musicMap = { 1: document.getElementById('mus-room1'), 2: document.getElementById('mus-room2'), 3: document.getElementById('mus-room3'), 5: document.getElementById('mus-room5'), 6: document.getElementById('mus-room3') };
             Object.values(musicMap).forEach(m => { if (m) { m.pause(); m.currentTime = 0; } });
             
             const prevRoom = state.room;
             state.room = id;
 
+            // Reset shock unless in Room 6 or specifically triggered
+            if (id !== 6) state.isShocked = false;
+
             if (id === 1 && !isInitial) {
-                state.winterX = 1100;
+                state.winterX = (prevRoom === 6) ? 220 : 1100;
                 state.winterY = 550;
             } else if (id === 2 && prevRoom === 1) {
-                state.winterX = 150;
-                state.winterY = 550;
+                state.winterX = 150; state.winterY = 550;
             } else if (id === 2 && prevRoom === 3) {
-                state.winterX = 1100;
-                state.winterY = 550;
-            } else if (id === 3 && prevRoom === 2) {
-                state.winterX = 150;
+                state.winterX = 1100; state.winterY = 550;
+            } else if (id === 3 && (prevRoom === 2 || prevRoom === 5)) {
+                state.winterX = (prevRoom === 5) ? 1000 : 150;
                 state.winterY = 550;
             } else if (id === 5) {
-                state.winterX = 150;
-                state.winterY = 550 - 125; 
+                state.winterX = 150; state.winterY = 550 - 125; 
+            } else if (id === 6) {
+                state.winterX = 640; state.winterY = 550;
+                state.isShocked = true;
+                initCoffeeParticles();
+                state.activeItem = "CoffeeHeavenEntry";
+                state.dialogueStep = 0;
+                setTimeout(advanceDialogue, 500);
             } else if (isInitial) {
-                state.winterX = 80;
-                state.winterY = 550;
+                state.winterX = 80; state.winterY = 550;
             }
 
-            state.isShocked = false;
-            document.getElementById('winter').src = "WinterIdle.png";
+            document.getElementById('winter').src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
             const currentMus = musicMap[id]; if (currentMus) { currentMus.volume = GLOBAL_VOLUME; currentMus.play().catch(e => {}); }
             renderScene(); fade.style.opacity = "0";
         }, 500);
@@ -493,12 +520,8 @@
         const kidnapperEl = document.getElementById('kidnapper');
         if (state.room === 5) {
             const hs = s.hotspots.find(h => h.id === "Kidnapper");
-            kidnapperEl.style.left = hs.x + "px";
-            kidnapperEl.style.top = hs.y + "px";
-            kidnapperEl.style.display = 'block';
-        } else {
-            kidnapperEl.style.display = 'none';
-        }
+            kidnapperEl.style.left = hs.x + "px"; kidnapperEl.style.top = hs.y + "px"; kidnapperEl.style.display = 'block';
+        } else kidnapperEl.style.display = 'none';
 
         ["Torch", "Books", "Vase", "Card", "Notepad", "Phone", "Balls", "Cue", "Mug"].forEach(name => {
             const el = document.getElementById('obj-' + name); if (!el) return;
@@ -521,58 +544,48 @@
         if (state.keys['_gpY']) dy += state.keys['_gpY'] * 5;
         
         const w = document.getElementById('winter');
-        const showShock = state.isShocked;
-        const currentScale = state.room === 5 ? 0.75 : 1;
+        const currentScale = (state.room === 5) ? 0.75 : 1;
 
         if (dx !== 0 || dy !== 0) {
             state.winterX = Math.max(50, Math.min(1230, state.winterX + dx));
             state.winterY = Math.max(scenes[state.room].wall, Math.min(680, state.winterY + dy));
-            
             state.frameTimer++;
             if (state.frameTimer > 10) {
                 state.walkFrame = state.walkFrame === 0 ? 1 : 0;
-                w.src = showShock ? (state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png") : (state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png");
+                w.src = state.isShocked ? (state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png") : (state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png");
                 state.frameTimer = 0;
             }
-            if (dx > 0) w.style.transform = `scale(${currentScale}, ${currentScale})`; 
-            else if (dx < 0) w.style.transform = `scale(${-currentScale}, ${currentScale})`;
+            w.style.transform = `scale(${(dx > 0 ? 1 : -1) * currentScale}, ${currentScale})`;
         } else {
-            w.src = showShock ? "WinterIdleShock.png" : "WinterIdle.png";
+            w.src = state.isShocked ? "WinterIdleShock.png" : "WinterIdle.png";
             state.walkFrame = 0;
-            const isFlipped = w.style.transform.includes("-");
-            w.style.transform = `scale(${isFlipped ? -currentScale : currentScale}, ${currentScale})`;
         }
         
-        const heightOffset = state.room === 5 ? 90 : 120;
         w.style.left = (state.winterX - 46) + 'px'; 
-        w.style.top = (state.winterY - heightOffset) + 'px';
+        w.style.top = (state.winterY - (state.room === 5 ? 90 : 120)) + 'px';
+        updateParticles();
     }
 
     function startGame() {
         state.started = true;
         const w = document.getElementById('winter');
-        w.style.bottom = '';
-        w.style.top = (state.winterY - 120) + 'px';
-        w.style.left = (state.winterX - 46) + 'px';
+        w.style.top = (state.winterY - 120) + 'px'; w.style.left = (state.winterX - 46) + 'px';
         changeRoom(1, true);
         say("Where am I? Why is it so dark? I better find some light.");
         gameLoop();
     }
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
-    
     function investigateItem() { state.dialogueStep = 0; advanceDialogue(); }
     function selectItem(idx) {
         if (!state.inventory[idx]) return; 
-        state.activeIdx = idx;
-        state.activeItem = state.inventory[idx];
+        state.activeIdx = idx; state.activeItem = state.inventory[idx];
         document.getElementById('active-txt').innerText = state.activeItem.toUpperCase();
         document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
         document.getElementById('s' + idx).classList.add('active-slot');
     }
     function closeClue() { document.getElementById('clue-overlay').style.display = 'none'; advanceDialogue(); }
     function triggerEnd() {
-        state.gameCompleted = true;
-        document.getElementById('end-screen').style.display = 'flex';
+        state.gameCompleted = true; document.getElementById('end-screen').style.display = 'flex';
         setTimeout(() => document.getElementById('end-screen').style.opacity = "1", 100);
     }
     function closeCredits() { document.getElementById('end-screen').style.display = 'none'; }
@@ -582,7 +595,7 @@
         if (document.getElementById('end-screen').style.display === 'flex') { closeCredits(); return; }
         if (titleShowing && (e.code === "Enter" || e.code === "Space")) { showPasswordScreen(); return; }
         if (!passwordPassed) return;
-        if (e.code === "Space" && document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
+        if ((e.code === "Space" || e.code === "Enter") && document.getElementById('dialogue').style.display === 'block') { advanceDialogue(); return; }
         if (e.code === "KeyE" && state.interactable) state.interactable.action();
     });
     window.addEventListener("keyup", e => state.keys[e.code] = false);
