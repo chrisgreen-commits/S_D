@@ -35,7 +35,6 @@
         .main-title { font-size: 45px; letter-spacing: 9px; color: #fff; text-shadow: 0 0 22px #be9b7b; margin: 15px 0; user-select: none; }
         
         .world-obj { position: absolute; z-index: 4; image-rendering: pixelated; display: none; width: 70px; }
-        
         #obj-Mug { width: 17.5px; } 
         #obj-Balls { width: 35px; } 
         
@@ -286,6 +285,7 @@
         if (state.keys["KeyA"]) dx -= 5; if (state.keys["KeyD"]) dx += 5;
         
         const winter = document.getElementById('winter');
+        const isShock = state.room === 6 || state.isShockedInRoom3;
         
         if (dx !== 0 || dy !== 0) {
             const limit = scenes[state.room].wall;
@@ -295,22 +295,25 @@
             
             state.frameTimer++;
             if (state.frameTimer > 8) {
+                // Toggles between 0 and 1
                 state.walkFrame = state.walkFrame === 0 ? 1 : 0;
                 state.frameTimer = 0;
             }
 
-            if (state.room === 6 || state.isShockedInRoom3) {
-                winter.src = state.walkFrame === 0 ? "WinterIdleShock.png" : "WinterWalk1_Shock.png";
+            // CLEANER FIX: Explicitly use walking sprites during movement
+            if (isShock) {
+                winter.src = "WinterWalk" + (state.walkFrame + 1) + "_Shock.png";
             } else {
-                winter.src = state.walkFrame === 0 ? "WinterIdle.png" : "WinterWalk1.png";
+                winter.src = "WinterWalk" + (state.walkFrame + 1) + ".png";
             }
 
             updateWinterStyle();
             if (dx !== 0) winter.style.transform = `scaleX(${dx < 0 ? -1 : 1})`;
         } else {
+            // IDLE state when no movement input
             state.frameTimer = 0;
             state.walkFrame = 0;
-            winter.src = (state.room === 6 || state.isShockedInRoom3) ? "WinterIdleShock.png" : "WinterIdle.png";
+            winter.src = isShock ? "WinterIdleShock.png" : "WinterIdle.png";
         }
         if (state.room === 6) updateParticles();
     }
@@ -320,7 +323,6 @@
         const kn = document.getElementById('kidnapper');
         const winter = document.getElementById('winter');
 
-        // Reset styling before checking next step
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
 
         if (state.cutsceneStep >= 100) {
@@ -348,9 +350,8 @@
             if (seq && state.dialogueStep < seq.length) {
                 let text = seq[state.dialogueStep];
                 
-                // NEW: Book specific styling logic
                 if (state.activeItem === "Books" && state.dialogueStep === 1) {
-                    d.style.backgroundColor = "#5d4037"; // Leather color
+                    d.style.backgroundColor = "#5d4037"; 
                     text = "📖 " + text;
                 }
 
@@ -360,13 +361,6 @@
             } else { d.style.display = 'none'; }
         }
     }
-
-    setInterval(() => {
-        if (state.kidnapperTalking) {
-            const kn = document.getElementById('kidnapper');
-            kn.src = kn.src.includes("Talk1") ? "KidnapperTalk2.png" : "KidnapperTalk1.png";
-        }
-    }, 5000);
 
     function startGame() { state.started = true; document.getElementById('title-screen').style.display = 'none'; changeRoom(1, true); gameLoop(); }
     function gameLoop() { if(!state.started) return; updateMovement(); checkProximity(); requestAnimationFrame(gameLoop); }
