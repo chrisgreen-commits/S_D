@@ -29,7 +29,7 @@
         }
 
         #winter { position: absolute; width: 93px; z-index: 5; transform-origin: bottom center; pointer-events: none; }
-        #kidnapper { position: absolute; height: 165px; width: auto; z-index: 4; image-rendering: pixelated; display: none; transform: translate(-50%, -100%); }
+        #kidnapper { position: absolute; height: 181.5px; width: auto; z-index: 4; image-rendering: pixelated; display: none; transform: translate(-50%, -100%); }
 
         #interact-prompt {
             position: absolute; background: rgba(255,255,255,0.9); color: #000;
@@ -219,7 +219,8 @@
         interactable: null, vasePlaced: false, cutsceneStep: 0,
         kidnapperTalking: false, phoneDead: false, notepadRead: false,
         lockpicking: false, isShocked: false, walkFrame: 0, frameTimer: 0,
-        room2DoorUnlocked: false
+        room2DoorUnlocked: false,
+        coffeeBeans: 0, playerLives: 1
     };
 
     const gamepadState = { prevButtons: {} };
@@ -279,7 +280,8 @@
         "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
         "Window": ["Hmm, it looks like I'm high in the mountains, somewhere in Europe, not sure where though."],
         "VasePlace": ["Much better!", "W-What's that noise?", "TRIGGER_ROOM3_OPEN"],
-        "FlowerObserve": ["Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in."]
+        "FlowerObserve": ["Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in."],
+        "Mug": ["COFFEE_HEAVEN_SEQUENCE"]
     };
 
     const scenes = {
@@ -306,8 +308,8 @@
             { id: "Window", x: 860 * R_W_SCALE_X, y: 450 * R_W_SCALE_Y, action: () => { state.activeItem = "Window"; state.dialogueStep = 0; advanceDialogue(); } }
         ]},
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
-            { id: "Back3", x: 192, y: 550, action: () => changeRoom(3) },
-            { id: "Kidnapper", x: 1000, y: 330 + 50, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
+            { id: "Back3", x: 192, y: 550 - 25, action: () => changeRoom(3) },
+            { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); } }
         ]}
     };
 
@@ -335,6 +337,18 @@
 
         if (seq && state.dialogueStep < seq.length) {
             let text = seq[state.dialogueStep];
+            if (text === "COFFEE_HEAVEN_SEQUENCE") {
+                state.coffeeBeans += 5;
+                if (state.coffeeBeans >= 50) {
+                    state.coffeeBeans = 0;
+                    state.playerLives++;
+                    say("Welcome to Coffee Heaven! You've collected enough beans for an extra life! Total lives: " + state.playerLives, false, "ItemMug.png", "#4e342e");
+                } else {
+                    say("Welcome to Coffee Heaven! You've found some coffee beans. Beans collected: " + state.coffeeBeans + "/50", false, "ItemMug.png", "#4e342e");
+                }
+                state.dialogueStep = 99;
+                return;
+            }
             if (seqName === "Lockpick") { say(text); if (state.dialogueStep === 1) { state.lockpicking = false; state.room2DoorUnlocked = true; } }
             else if (state.activeItem === "Notepad") {
                 if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
@@ -426,7 +440,7 @@
                 state.winterY = 784 * R_W_SCALE_Y;
             } else if (id === 5) {
                 state.winterX = 150;
-                state.winterY = 550 - 100; // 100px higher spawn
+                state.winterY = 550 - 125; // 100px higher spawn + 25px room adjustment
             } else {
                 state.winterX = 80;
                 state.winterY = 550;
