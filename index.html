@@ -292,7 +292,12 @@
         "VasePlace": ["Much better!", "W-What's that noise?", "TRIGGER_ROOM3_OPEN"],
         "FlowerObserve": ["Someone dumped this flower here? Odd. Shame to let it go to waste. If only I had a vase to put it in."],
         "Mug": ["COFFEE_HEAVEN_SEQUENCE"],
-        "CoffeeHeavenEntry": ["I'm in coffee heaven!!!"]
+        "CoffeeHeavenEntry": ["I'm in coffee heaven!!!"],
+        "Torch": ["It's a heavy iron torch. It's lighting the way."],
+        "Vase": ["A simple ceramic vase. It looks like it belongs on a pedestal."],
+        "Card": ["An Ace of Spades. Detective Smith seemed to think this was important."],
+        "Balls": ["Standard billiard balls. They're quite heavy."],
+        "Cue": ["A sturdy pool cue. It's well-balanced."]
     };
 
     const scenes = {
@@ -405,6 +410,7 @@
             else if (state.activeItem === "Notepad") {
                 if (state.dialogueStep === 1) { state.notepadRead = true; say(text, false, "ItemNotepad.png", "#5d4037"); }
                 else if (text === "WINTER_FOLLOWUP") say(state.inventory.includes("Phone") ? "I wonder if the phone has the pictures he mentioned?" : "I wonder where the pictures he mentioned are? There's none in the notepad.");
+                else say(text);
             } else if (seqName === "PhoneClue") {
                 if (text === "CLUE_OVERLAY") document.getElementById('clue-overlay').style.display = 'flex';
                 else if (text === "SHOCK_MOMENT") { state.isShocked = true; winter.src = "WinterIdleShock.png"; say("Oh no the cell phone is out of power now. I'll have to keep that in mind for later."); state.phoneDead = true; }
@@ -412,6 +418,7 @@
             } else if (state.activeItem === "Books") {
                 if (state.dialogueStep === 1) say("📖 " + text, true, null, "#5d4037");
                 else if (state.dialogueStep === 2) { say(text); state.remarkMade = true; }
+                else say(text);
             }
             else if (text === "TRIGGER_ROOM3_OPEN") {
                 document.getElementById('bg').src = "Room3_Billiards3.png";
@@ -427,7 +434,7 @@
         const d = document.getElementById('dialogue');
         if (bgOverride) d.style.backgroundColor = bgOverride;
         let img = portraitOverride || (state.kidnapperTalking ? 'KidnapperHead.png' : 'WinterHead.png');
-        d.innerHTML = `<img src="${img}">${msg}<span>(Space / Y to continue)</span>`;
+        d.innerHTML = `<img src="${img}">${msg}<span>(Space / Button to continue)</span>`;
         d.style.display = 'block';
     }
 
@@ -567,8 +574,10 @@
     }
 
     function startGame() {
+        state.gameCompleted = false;
         state.started = true;
         const w = document.getElementById('winter');
+        w.style.bottom = '';
         w.style.top = (state.winterY - 120) + 'px'; w.style.left = (state.winterX - 46) + 'px';
         changeRoom(1, true);
         say("Where am I? Why is it so dark? I better find some light.");
