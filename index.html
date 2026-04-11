@@ -310,14 +310,14 @@
                 if (state.activeItem === "Mug") changeRoom(6); 
                 else say("Hmm, a secret door. It's locked tight. I'll need to find another way.");
             }},
-            { id: "Exit", x: 1210 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
+            { id: "Exit", x: 1100, y: 412 * SCALE_Y, action: () => { 
                 if(state.remarkMade) changeRoom(2); 
                 else if(state.activeItem === "Books") { state.dialogueStep = 1; advanceDialogue(); }
                 else say("I feel like I'm missing something important in this room."); 
             } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 160, y: 550, action: () => changeRoom(1) },
+            { id: "Back", x: 320, y: 550, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 788 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
             { id: "Next", x: 1150, y: 550, action: () => handleBilliardEntry() } 
@@ -333,7 +333,11 @@
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 225, y: 557, action: () => changeRoom(3) },
             { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { 
-                if(state.gameCompleted) { state.kidnapperTalking = true; say("I've given you my offer, Winter. The choice is yours."); return; }
+                if(state.gameCompleted) { 
+                    state.kidnapperTalking = true; 
+                    say("I've given you my offer, Winter. The choice is yours."); 
+                    return; 
+                }
                 state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
             } }
         ]},
@@ -384,10 +388,23 @@
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
 
         if (state.cutsceneStep >= 100) {
-            const finalLines = [{ s: "K", t: "Well done Winter O'Brien. You escaped. This was all a ruse to prove your investigative skills. Excalibur is real, but it's not here. We need to travel to Avalon to find it. What do you say? Will you help me?" }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
+            const finalLines = [
+                { s: "K", t: "Well done Winter O'Brien. You escaped. This was all a ruse to prove your investigative skills. Excalibur is real, but it's not here. We need to travel to Avalon to find it. What do you say? Will you help me?" }, 
+                { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, 
+                { s: "K", t: "So you *are* saying yes then?" }, 
+                { s: "W", t: "Maybe..." }
+            ];
             const idx = state.cutsceneStep - 100;
-            if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
-            else { d.style.display = 'none'; triggerEnd(); }
+            if (idx < finalLines.length) { 
+                state.kidnapperTalking = (finalLines[idx].s === "K"); 
+                say(finalLines[idx].t); 
+                state.cutsceneStep++; 
+            }
+            else { 
+                d.style.display = 'none'; 
+                state.kidnapperTalking = false; // Reset portrait state after cutscene
+                triggerEnd(); 
+            }
             return;
         }
 
@@ -427,7 +444,11 @@
             }
             else say(text);
             state.dialogueStep++;
-        } else { d.style.display = 'none'; if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); }
+        } else { 
+            d.style.display = 'none'; 
+            state.kidnapperTalking = false; // Reset portrait state
+            if (state.lockpicking === false && seqName === "Lockpick") changeRoom(3); 
+        }
     }
 
     function say(msg, skipPortrait = false, portraitOverride = null, bgOverride = null) {
@@ -489,10 +510,10 @@
             if (id !== 6) state.isShocked = false;
 
             if (id === 1 && !isInitial) {
-                state.winterX = (prevRoom === 6) ? 220 : 1100;
+                state.winterX = (prevRoom === 6) ? 220 : 1050;
                 state.winterY = 550;
             } else if (id === 2 && prevRoom === 1) {
-                state.winterX = 210; state.winterY = 550;
+                state.winterX = 350; state.winterY = 550;
             } else if (id === 2 && prevRoom === 3) {
                 state.winterX = 1100; state.winterY = 550;
             } else if (id === 3 && (prevRoom === 2 || prevRoom === 5)) {
