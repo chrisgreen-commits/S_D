@@ -284,7 +284,7 @@
     const dialogueSequences = {
         "Books": ["Hmm, a book about King Arthur.", "Excalibur, King Arthur's sword, is believed to be hidden in Avalon, King Arthur's castle, but only the savviest archeologist, or investigator could ever find it.", "As tempting as it would be to find a missing relic, I'm interested in getting out of here."],
         "Phone": ["I wonder who this belongs too? It's an older cell phone. Early 2000s. The contact page says, Detective Ambrose Smith."],
-        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad, and can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
+        "Notepad": ["A notepad?", "I've failed. I can't find the sword, or my way out of this wretched place. I'll never know why I was brought here. I only hope whoever finds this notepad can benefit from my observations and photographs, and solve these mysteries. - Smith.", "WINTER_FOLLOWUP"],
         "PhoneDead": ["The phone is completely dead. No way to turn it on."],
         "PhoneClue": ["This must be one of the photos he mentioned.", "CLUE_OVERLAY", "A playing card? Why did Detective Smith find that important to photograph? I wonder what else is in here...", "SHOCK_MOMENT"],
         "Lockpick": ["Hey, maybe I can use this card pick the lock.", "It worked!"],
@@ -384,7 +384,7 @@
         d.style.backgroundColor = "rgba(0,0,0,0.95)";
 
         if (state.cutsceneStep >= 100) {
-            const finalLines = [{ s: "K", t: "Well well Winter O'Brien. This was all a ruse to prove your investigative skills..." }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
+            const finalLines = [{ s: "K", t: "Well done Winter O'Brien. You escaped. This was all a ruse to prove your investigative skills. Excalibur is real, but it's not here. We need to travel to Avalon to find it. What do you say? Will you help me?" }, { s: "W", t: "I don't approve of your methods, but I'm curious about Excalibur. Before I say yes, tell me more." }, { s: "K", t: "So you *are* saying yes then?" }, { s: "W", t: "Maybe..." }];
             const idx = state.cutsceneStep - 100;
             if (idx < finalLines.length) { state.kidnapperTalking = (finalLines[idx].s === "K"); say(finalLines[idx].t); state.cutsceneStep++; }
             else { d.style.display = 'none'; triggerEnd(); }
