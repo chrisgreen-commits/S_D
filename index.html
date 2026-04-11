@@ -310,14 +310,14 @@
                 if (state.activeItem === "Mug") changeRoom(6); 
                 else say("Hmm, a secret door. It's locked tight. I'll need to find another way.");
             }},
-            { id: "Exit", x: 1153 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
+            { id: "Exit", x: 1210 * SCALE_X, y: 412 * SCALE_Y, action: () => { 
                 if(state.remarkMade) changeRoom(2); 
                 else if(state.activeItem === "Books") { state.dialogueStep = 1; advanceDialogue(); }
                 else say("I feel like I'm missing something important in this room."); 
             } }
         ]},
         2: { bg: "Room2_Hallway.png", wall: 432, hotspots: [ 
-            { id: "Back", x: 100, y: 550, action: () => changeRoom(1) },
+            { id: "Back", x: 160, y: 550, action: () => changeRoom(1) },
             { id: "Notepad", x: 1872 * R_W_SCALE_X, y: 788 * R_W_SCALE_Y, action: () => pickup("Notepad", "ItemNotepad.png", "I found a notepad.") },
             { id: "Phone", x: 369 * R_W_SCALE_X, y: (1020 * R_W_SCALE_Y) - 15, action: () => pickup("Phone", "ItemPhone.png", "An old cell phone.") },
             { id: "Next", x: 1150, y: 550, action: () => handleBilliardEntry() } 
@@ -333,7 +333,7 @@
         5: { bg: "Room5_Rooftop.png", wall: 280, hotspots: [
             { id: "Back3", x: 225, y: 557, action: () => changeRoom(3) },
             { id: "Kidnapper", x: 1000, y: 330 + 50 + 15, action: () => { 
-                if(state.gameCompleted) { say("I've given you my offer, Winter. The choice is yours."); return; }
+                if(state.gameCompleted) { state.kidnapperTalking = true; say("I've given you my offer, Winter. The choice is yours."); return; }
                 state.cutsceneStep = 100; state.dialogueStep = 0; advanceDialogue(); 
             } }
         ]},
@@ -492,7 +492,7 @@
                 state.winterX = (prevRoom === 6) ? 220 : 1100;
                 state.winterY = 550;
             } else if (id === 2 && prevRoom === 1) {
-                state.winterX = 150; state.winterY = 550;
+                state.winterX = 210; state.winterY = 550;
             } else if (id === 2 && prevRoom === 3) {
                 state.winterX = 1100; state.winterY = 550;
             } else if (id === 3 && (prevRoom === 2 || prevRoom === 5)) {
